@@ -3,6 +3,9 @@ package com.example.eunyoungha.r_multi_note;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 /**
  * Created by eunyoung.ha on 2017/10/20.
  */
@@ -16,11 +19,24 @@ import android.os.Parcelable;
     private int id_video;
     private int id_voice;
 
-    public MemoList(int id, String date, String content_text,int id_photo) {
+    public MemoList (JSONObject object){
+        try{
+            this.id = object.getInt("id");
+            this.content_text = object.getString("textmemo");
+            this.date = object.getString("date");
+            this.id_photo = object.getInt("photoid");
+        }catch (JSONException e){
+
+        }
+    }
+
+    public MemoList(int id, String date, String content_text,int id_photo, int id_video, int id_voice) {
         this.id = id;
         this.date = date;
         this.content_text = content_text;
         this.id_photo = id_photo;
+        this.id_video = id_video;
+        this.id_voice = id_voice;
     }
 
     public MemoList() {
@@ -31,6 +47,8 @@ import android.os.Parcelable;
         this.date = source.readString();
         this.content_text = source.readString();
         this.id_photo = source.readInt();
+        this.id_video = source.readInt();
+        this.id_voice = source.readInt();
     }
 
     public int getId() {
@@ -65,6 +83,22 @@ import android.os.Parcelable;
         this.id_photo = id_photo;
     }
 
+    public int getId_video() {
+        return id_video;
+    }
+
+    public void setId_video(int id_video) {
+        this.id_video = id_video;
+    }
+
+    public int getId_voice() {
+        return id_voice;
+    }
+
+    public void setId_voice(int id_voice) {
+        this.id_voice = id_voice;
+    }
+
     @Override
     public int describeContents() {
         return 0;
@@ -76,6 +110,8 @@ import android.os.Parcelable;
         dest.writeString(date);
         dest.writeString(content_text);
         dest.writeInt(id_photo);
+        dest.writeInt(id_video);
+        dest.writeInt(id_voice);
     }
 
     @SuppressWarnings("rawtypes")

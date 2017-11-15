@@ -1,14 +1,16 @@
 package com.example.eunyoungha.r_multi_note;
 
-import android.content.Intent;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.view.View;
 import android.view.Window;
 import android.widget.Button;
+
+import com.example.eunyoungha.r_multi_note.fragments.FragmentStartOne;
+import com.example.eunyoungha.r_multi_note.fragments.FragmentStartThree;
+import com.example.eunyoungha.r_multi_note.fragments.FragmentStartTwo;
 
 public class StartActivity extends AppCompatActivity {
 

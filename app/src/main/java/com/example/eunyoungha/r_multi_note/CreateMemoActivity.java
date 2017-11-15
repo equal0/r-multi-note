@@ -3,17 +3,18 @@ package com.example.eunyoungha.r_multi_note;
 import android.Manifest;
 import android.annotation.TargetApi;
 import android.app.AlertDialog;
-import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
+import android.media.ExifInterface;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.net.Uri;
@@ -55,6 +56,7 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -123,15 +125,19 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
 
     private DatabaseHelper dbHelper;
     private DatabaseHelper dbHelperPhoto;
+    private DatabaseHelper dbHelperVideo;
+    private DatabaseHelper dbHelperVoice;
 
     private MemoList memo;
 
     private Uri mImageUri;
     private Uri mVideoUri;
+    private Uri mVoiceUri;
     private File file =  null;
     private File videoFile = null;
     private MediaPlayer player;
     private MediaRecorder recorder;
+    private String voicePath;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -152,6 +158,8 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
 
         dbHelper = new DatabaseHelper(getApplicationContext(), "memo.db", null, 1);
         dbHelperPhoto = new DatabaseHelper(getApplicationContext(),"photo.db",null,1);
+        dbHelperVideo = new DatabaseHelper(getApplicationContext(),"video.db",null,1);
+        dbHelperVoice = new DatabaseHelper(getApplicationContext(),"voice.db",null,1);
 
         //툴바 세팅
         toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -171,13 +179,10 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         mVideo = (VideoView) findViewById(R.id.memo_multi_view_video);
         mapLayout = (RelativeLayout) findViewById(R.id.map_layout);
         mVoice = (RelativeLayout) findViewById(R.id.voice_layout);
-        mRecordButton = (Button) findViewById(R.id.record_button);
-        mStopButton = (Button) findViewById(R.id.stop_button);
         mPlayButton = (Button) findViewById(R.id.play_button);
 
         //메모 화면 하단의 버튼들
         LinearLayout multiButtons = (LinearLayout) findViewById(R.id.layout_multi_bar);
-        //mDeleteButton = (ImageView) findViewById(R.id.multi_trash_button);
         mInsertPhotoButton = (ImageView) findViewById(R.id.multi_photo_button);
         mInsertVideoButton = (ImageView) findViewById(R.id.multi_video_button);
         mInsertVoiceButton = (ImageView) findViewById(R.id.multi_voice_button);
@@ -208,14 +213,27 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
 
                 if(content.length() != 0){
                     int photoId = -1;
+                    int videoId = -1;
+                    int voiceId = -1;
                     if(mImageUri != null){
                         String photoUri = mImageUri.toString();
                         dbHelperPhoto.photoInsert(date, photoUri);
                         photoId = dbHelperPhoto.getPhotoId(photoUri);
-                        dbHelper.insert(date,content,photoId);
-                    } else{
-                        dbHelper.insert(date,content,photoId);
+                        //dbHelper.insert(date,content,photoId,videoId,voiceId);
                     }
+                    if(mVideoUri != null){
+                        String videoUri = mVideoUri.toString();
+                        dbHelperVideo.videoInsert(date,videoUri);
+                        videoId = dbHelperVideo.getVideoId(videoUri);
+                        //dbHelper.insert(date,content,photoId,videoId,voiceId);
+                    }
+                    if(mVoiceUri != null){
+                        String voiceUri = mVoiceUri.toString();
+                        dbHelperVoice.voiceInsert(date,voiceUri);
+                        voiceId = dbHelperVoice.getVoiceId(voiceUri);
+                        //dbHelper.insert(date,content,photoId,videoId,voiceId);
+                    }
+                    dbHelper.insert(date,content,photoId,videoId,voiceId);
                 }
                 listIntent();
             }
@@ -225,12 +243,18 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         if(getIntent().getBundleExtra("bundle") != null){
             memo = getIntent().getParcelableExtra("memo");
 
-            //memo의 id_photo를 가져와서 photo테이블에서 해당 id를 가진 uri를 가져와서 image뷰에 박아야함
             int photoId = memo.getId_photo();
+            int videoId = memo.getId_video();
+            int voiceId = memo.getId_voice();
             if(photoId != -1){
-                Uri photoUri = getPhotoUri(photoId);
-                Toast.makeText(getApplicationContext(),photoUri.toString(),Toast.LENGTH_SHORT).show();
-                mPhoto.setImageURI(photoUri);
+                mImageUri = getUri(MEDIA_TYPE_PHOTO, photoId);
+                setPhoto();
+            }else if(videoId != -1){
+                mVideoUri = getUri(MEDIA_TYPE_VIDEO, videoId);
+                setVideo();
+            }else if(voiceId != -1){
+                mVoiceUri = getUri(MEDIA_TYPE_VOICE,voiceId);
+                setVoice();
             }
 
             textEditView.setText(memo.getContent_text());
@@ -291,53 +315,8 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         mInsertVoiceButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                changeMargin();
-                mVoice.setVisibility(View.VISIBLE);
-            }
-        });
-
-        mRecordButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(recorder != null){
-                    recorder.stop();
-                    recorder.release();
-                    recorder = null;
-                }
-                recorder = new MediaRecorder();
-                recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-                recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-                recorder.setAudioEncoder(MediaRecorder.AudioEncoder.DEFAULT);
-                recorder.setOutputFile(RECORD_FILE);
-
-                try{
-                    recorder.prepare();
-                    recorder.start();
-                }catch(Exception e){}
-            }
-        });
-
-        mStopButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(recorder == null){
-                    return;
-                }
-                recorder.stop();
-                recorder.release();
-                recorder = null;
-            }
-        });
-
-        mPlayButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                MediaPlayer player = new MediaPlayer();
-                try {
-                    player.setDataSource(RECORD_FILE);
-                    player.prepare();
-                    player.start();
-                }catch(IOException e){}
+             Intent intent = new Intent(MediaStore.Audio.Media.RECORD_SOUND_ACTION);
+             startActivityForResult(intent,REQUEST_RECORD_VOICE);
             }
         });
 
@@ -474,6 +453,8 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
             mGoogleApiClient.connect();
         }
         super.onStart();
+
+
     }
 
     @Override
@@ -751,10 +732,18 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         builder.create().show();
     }
 
-    protected Uri getPhotoUri(int photoId){
-        //uri를 tostring하여 db에 저장했으므로 file:// 이 붙는다 해당 부분 제거해서 돌려주기
-        String photoUri = dbHelperPhoto.getPhotoUri(photoId);
-        Uri uri = Uri.parse(photoUri);
+    protected Uri getUri(int type, int id){
+        Uri uri = null;
+        if(type == MEDIA_TYPE_PHOTO){
+            String photoUri = dbHelperPhoto.getPhotoUri(id);
+            uri = Uri.parse(photoUri);
+        }else if(type == MEDIA_TYPE_VIDEO){
+            String videoUri = dbHelperVideo.getVideoUri(id);
+            uri = Uri.parse(videoUri);
+        }else if(type == MEDIA_TYPE_VOICE){
+            String voiceUri = dbHelperVoice.getVoiceUri(id);
+            uri = Uri.parse(voiceUri);
+        }
         return uri;
     }
 
@@ -872,63 +861,30 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         switch (requestCode){
             case REQUEST_TAKE_PHOTO:
             if(resultCode == RESULT_OK){
-                changeMargin();
-                mPhoto.setVisibility(View.VISIBLE);
-                BitmapFactory.Options options = new BitmapFactory.Options();
-                options.inSampleSize = 10;
-                //Bitmap bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(mImageUri),null,options);
-                Bitmap bitmap = BitmapFactory.decodeFile(file.getAbsolutePath(),options);
-                mPhoto.setImageBitmap(bitmap);
-            }else{
-                Toast.makeText(getApplicationContext(),"didn't respond",Toast.LENGTH_SHORT).show();
-            }
+                setPhoto();
+            }else Toast.makeText(getApplicationContext(),"didn't respond",Toast.LENGTH_SHORT).show();
             break;
             case REQUEST_PHOTO_LIBRARY:
                 if(resultCode == RESULT_OK){
-                    changeMargin();
-                    mPhoto.setVisibility(View.VISIBLE);
                     Uri uri = data.getData();
                     mImageUri = uri;
-                    BitmapFactory.Options options1 = new BitmapFactory.Options();
-                    options1.inSampleSize = 10;
-                    try{
-                        //Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(),uri);
-                        Bitmap bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(mImageUri),null,options1);
-                        mPhoto.setImageBitmap(bitmap);
-                    }catch (IOException e){
-
-                    }
-                }else{
-                    Toast.makeText(getApplicationContext(),"didn't respond",Toast.LENGTH_SHORT).show();
-                }
+                    setPhoto();
+                }else Toast.makeText(getApplicationContext(),"didn't respond",Toast.LENGTH_SHORT).show();
                 break;
             case REQUEST_TAKE_VIDEO:
                 if(resultCode == RESULT_OK){
-                    changeMargin();
-                    mVideo.setVisibility(View.VISIBLE);
-                    String path = videoFile.getAbsolutePath();
-                    mVideo.setVideoPath(path);
-                    final MediaController mediaController = new MediaController(this);
-                    mVideo.setMediaController(mediaController);
-                    mVideo.start();
-                    mVideo.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            mediaController.show(0);
-                            mVideo.pause();
-                        }
-                    },100);
-                }else{
-                    Toast.makeText(getApplicationContext(),"didn't respond",Toast.LENGTH_SHORT).show();
-                }
+                    setVideo();
+                }else Toast.makeText(getApplicationContext(),"didn't respond",Toast.LENGTH_SHORT).show();
                 break;
             case REQUEST_VIDEO_LIBRARY:
                 if(resultCode == RESULT_OK){
+                    Uri uri = data.getData();
+                    mVideoUri = uri;
                     changeMargin();
                     mVideo.setVisibility(View.VISIBLE);
-                    Uri uri = data.getData();
-                    String path = getPath(uri);
+                    String path = getPath(mVideoUri);
                     mVideo.setVideoPath(path);
+                    //mVideo.setVideoURI(mVideoUri);
                     final MediaController mediaController = new MediaController(this);
                     mVideo.setMediaController(mediaController);
                     mVideo.start();
@@ -939,9 +895,14 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                             mVideo.pause();
                         }
                     },100);
-                }else{
-                    Toast.makeText(getApplicationContext(),"didn't respond",Toast.LENGTH_SHORT).show();
-                }
+                }else Toast.makeText(getApplicationContext(),"didn't respond",Toast.LENGTH_SHORT).show();
+                break;
+            case REQUEST_RECORD_VOICE:
+                if(resultCode == RESULT_OK){
+                    Uri uri = data.getData();
+                    mVoiceUri = uri;
+                    setVoice();
+                }else Toast.makeText(getApplicationContext(),"didn't respond",Toast.LENGTH_SHORT).show();
                 break;
             case GPS_ENABLE_REQUEST_CODE:
 
@@ -976,6 +937,64 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         return null;
     }
 
+    protected void setPhoto(){
+        changeMargin();
+        mPhoto.setVisibility(View.VISIBLE);
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inSampleSize = 10;
+        Bitmap bitmap = null;
+        try{
+            bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(mImageUri),null,options);
+            ExifInterface exif = new ExifInterface(mImageUri.getPath());
+            int exifOrientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+            int exifDegree = exifOrientationToDegrees(exifOrientation);
+            bitmap = rotate(bitmap,exifDegree);
+        }catch (FileNotFoundException e){
+            e.printStackTrace();
+        }catch (IOException e){
+            e.printStackTrace();
+        }
+        mPhoto.setImageBitmap(bitmap);
+    }
+
+    protected void setVideo(){
+        changeMargin();
+        mVideo.setVisibility(View.VISIBLE);
+        //String path = videoFile.getAbsolutePath();
+        //mVideo.setVideoPath(path);
+        mVideo.setVideoURI(mVideoUri);
+        final MediaController mediaController = new MediaController(this);
+        mVideo.setMediaController(mediaController);
+        mVideo.start();
+        mVideo.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                mediaController.show(0);
+                mVideo.pause();
+            }
+        },100);
+    }
+
+    protected void setVoice(){
+        changeMargin();
+        mVoice.setVisibility(View.VISIBLE);
+        voicePath = getPath(mVoiceUri);
+        mPlayButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try{
+                    MediaPlayer mediaPlayer = new MediaPlayer();
+                    mediaPlayer.setDataSource(voicePath);
+                    mediaPlayer.prepare();
+                    mediaPlayer.start();
+                }catch(IOException e){
+
+                }
+
+            }
+        });
+    }
+
     protected void changeMargin(){
         //사진이 들어가는 레이아웃 보여주기
         mMultiMemoView.setVisibility(View.VISIBLE);
@@ -984,5 +1003,32 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         RelativeLayout.LayoutParams mLayoutParams = (RelativeLayout.LayoutParams) mMemoView.getLayoutParams();
         mLayoutParams.topMargin = 40;
         mMemoView.setLayoutParams(mLayoutParams);
+    }
+
+    public int exifOrientationToDegrees(int exifOrientation){
+        if(exifOrientation == ExifInterface.ORIENTATION_ROTATE_90){
+            return 90;
+        } else if(exifOrientation == ExifInterface.ORIENTATION_ROTATE_180){
+            return 180;
+        } else if(exifOrientation == ExifInterface.ORIENTATION_ROTATE_270){
+            return 270;
+        }
+        return 0;
+    }
+
+    public Bitmap rotate(Bitmap bitmap, int degrees){
+        if(degrees != 0 && bitmap != null){
+            Matrix matrix = new Matrix();
+            matrix.setRotate(degrees,(float)bitmap.getWidth()/2,(float)bitmap.getHeight()/2);
+
+            try{
+                Bitmap converted = Bitmap.createBitmap(bitmap,0,0,bitmap.getWidth(),bitmap.getHeight(),matrix,true);
+                if(bitmap != converted){
+                    bitmap.recycle();
+                    bitmap = converted;
+                }
+            } catch(OutOfMemoryError e){}
+        }
+        return bitmap;
     }
 }

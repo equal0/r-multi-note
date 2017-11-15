@@ -23,8 +23,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements NoteAPICallback {
 
     private static final String TAG = MainActivity.class.getCanonicalName();
 
@@ -43,6 +44,8 @@ public class MainActivity extends AppCompatActivity {
 
     private final int REQUEST_CODE_NEW_MEMO = 101;
 
+    private List<MemoList> mDataSet;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -55,18 +58,21 @@ public class MainActivity extends AppCompatActivity {
         memoListAdapter = new MemoListAdapter();
         showingResult = (ListView) findViewById(R.id.showing_memo_list);
 
-        final ArrayList<MemoList> memoList = dbHelper.getResult();
+        //test for interacting with app and api
+        //new NoteAPI(getApplicationContext(),this).execute();
 
+        //memo for database
+        final ArrayList<MemoList> memoList = dbHelper.getResult();
         for(int i = 0 ; i < memoList.size() ; i++){
             int id = memoList.get(i).getId();
             String date = memoList.get(i).getDate();
             String context_text = memoList.get(i).getContent_text();
             int photoId = memoList.get(i).getId_photo();
-
-            memoListAdapter.addItem(new MemoList(id, date,context_text,photoId));
+            int videoId = memoList.get(i).getId_video();
+            int voiceId = memoList.get(i).getId_voice();
+            memoListAdapter.addItem(new MemoList(id, date,context_text,photoId,videoId,voiceId));
         }
-
-        showingResult.setAdapter(memoListAdapter);
+       showingResult.setAdapter(memoListAdapter);
 
         //리스트 뷰의 메모항목을 눌렀을 때 해당되는 동작
         showingResult.setOnItemClickListener(new AdapterView.OnItemClickListener(){
@@ -129,6 +135,34 @@ public class MainActivity extends AppCompatActivity {
                 mDrawerLayout.closeDrawer(GravityCompat.START);
             }
         });
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+    }
+
+    @Override
+    public void processFinish(APIResponse response) {
+        List<MemoList> list = response.getMemoList();
+        if(list == null){
+            Toast.makeText(this,"memo is not exist",Toast.LENGTH_SHORT).show();
+        }else{
+            if(mDataSet == null || memoListAdapter == null){
+                mDataSet = list;
+                memoListAdapter = new MemoListAdapter();
+            for(int i = 0 ; i < mDataSet.size() ; i++){
+            int id = mDataSet.get(i).getId();
+            String date = mDataSet.get(i).getDate();
+            String context_text = mDataSet.get(i).getContent_text();
+            int photoId = mDataSet.get(i).getId_photo();
+            int videoId = mDataSet.get(i).getId_video();
+            int voiceId = mDataSet.get(i).getId_voice();
+            memoListAdapter.addItem(new MemoList(id, date,context_text,photoId,videoId,voiceId));
+        }
+                showingResult.setAdapter(memoListAdapter);
+            }
+        }
     }
 
     @Override

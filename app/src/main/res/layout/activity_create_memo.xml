@@ -60,25 +60,10 @@
                 android:visibility="gone"
                 >
                 <Button
-                    android:id="@+id/record_button"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="record"
-                    />
-
-                <Button
-                    android:id="@+id/stop_button"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="stop"
-                    android:layout_toRightOf="@+id/record_button"
-                    />
-                <Button
                     android:id="@+id/play_button"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="play"
-                    android:layout_toRightOf="@+id/stop_button"
                     />
             </RelativeLayout>
 

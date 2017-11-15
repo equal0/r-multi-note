@@ -62,6 +62,36 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 + TABLE_PHOTO + "(" + URI + ");"
         );
 
+        db.execSQL("CREATE TABLE "
+                + TABLE_VIDEO
+                + "("
+                +"_id INTEGER PRIMARY KEY AUTOINCREMENT"
+                +"," + INPUT_DATE + " TEXT"
+                +"," + URI + " TEXT"
+                +")"
+        );
+
+        db.execSQL("CREATE INDEX "
+                + TABLE_VIDEO + "_IDX"
+                + " ON "
+                + TABLE_VIDEO + "(" + URI + ");"
+        );
+
+        db.execSQL("CREATE TABLE "
+                + TABLE_VOICE
+                + "("
+                +"_id INTEGER PRIMARY KEY AUTOINCREMENT"
+                +"," + INPUT_DATE + " TEXT"
+                +"," + URI + " TEXT"
+                +")"
+        );
+
+        db.execSQL("CREATE INDEX "
+                + TABLE_VOICE + "_IDX"
+                + " ON "
+                + TABLE_VOICE + "(" + URI + ");"
+        );
+
     }
 
     @Override
@@ -70,10 +100,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     //우선 텍스트메모만 저장 가능한 상황이라고 가정, 날짜와 텍스트만 저장한다
-    protected void insert(String date, String content, int photoId){
+    protected void insert(String date, String content, int photoId, int videoId, int voiceId){
         SQLiteDatabase db = getWritableDatabase();
 
-        String insertSql = "INSERT INTO " + TABLE_MEMO + " VALUES(null,'"+date+"','"+content+"',"+photoId+", null, null);";
+        String insertSql = "INSERT INTO " + TABLE_MEMO + " VALUES(null,'"+date+"','"+content+"',"+photoId+","+videoId+", "+voiceId+");";
         db.execSQL(insertSql);
     }
 
@@ -99,12 +129,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         String date;
         String context_text;
         int id_photo;
+        int id_video;
+        int id_voice;
 
         ArrayList<MemoList> memoList = new ArrayList<>();
 
         SQLiteDatabase db = getReadableDatabase();
 
-        String selectQuery = "SELECT " + ID + ", " + INPUT_DATE + ", " +CONTEXT_TEXT + ", " + ID_PHOTO +" FROM " + TABLE_MEMO + " ORDER BY _id desc";
+        String selectQuery = "SELECT " + ID + ", " + INPUT_DATE + ", " +CONTEXT_TEXT + ", " + ID_PHOTO +", " + ID_VIDEO +"," + ID_VOICE + " FROM " + TABLE_MEMO + " ORDER BY _id desc";
 
         Cursor cursor = db.rawQuery(selectQuery,null);
 
@@ -113,8 +145,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             date = cursor.getString(1);
             context_text = cursor.getString(2);
             id_photo = cursor.getInt(3);
+            id_video = cursor.getInt(4);
+            id_voice = cursor.getInt(5);
 
-            MemoList memo = new MemoList(id, date, context_text,id_photo);
+            MemoList memo = new MemoList(id, date, context_text,id_photo,id_video,id_voice);
 
             memoList.add(memo);
         }
@@ -154,4 +188,71 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         cursor.close();
         return uri;
     }
+
+    protected void videoInsert(String date, String uri){
+        SQLiteDatabase db = getWritableDatabase();
+
+        String sql = "INSERT INTO " + TABLE_VIDEO + " VALUES(null,'" + date + "','" +uri + "');";
+        db.execSQL(sql);
+    }
+
+    protected int getVideoId(String uri){
+        SQLiteDatabase db = getReadableDatabase();
+        String sql = "SELECT _id FROM " + TABLE_VIDEO +" where uri = '" + uri +"';";
+        int videoId = -1;
+        Cursor cursor = db.rawQuery(sql,null);
+        while(cursor.moveToNext()){
+            videoId = cursor.getInt(0);
+            return videoId;
+        }
+        cursor.close();
+        return videoId;
+    }
+
+    protected String getVideoUri(int videoId){
+        SQLiteDatabase db = getReadableDatabase();
+        String sql = "SELECT uri FROM " + TABLE_VIDEO + " WHERE _id=" + videoId + ";";
+        String uri = null;
+        Cursor cursor = db.rawQuery(sql,null);
+        while(cursor.moveToNext()){
+            uri = cursor.getString(0);
+            return uri;
+        }
+        cursor.close();
+        return uri;
+    }
+
+    protected void voiceInsert(String date, String uri){
+        SQLiteDatabase db = getWritableDatabase();
+
+        String sql = "INSERT INTO " + TABLE_VOICE + " VALUES(null,'" + date + "','" +uri + "');";
+        db.execSQL(sql);
+    }
+
+    protected int getVoiceId(String uri){
+        SQLiteDatabase db = getReadableDatabase();
+        String sql = "SELECT _id FROM " + TABLE_VOICE +" where uri = '" + uri +"';";
+        int voiceId = -1;
+        Cursor cursor = db.rawQuery(sql,null);
+        while(cursor.moveToNext()){
+            voiceId = cursor.getInt(0);
+            return voiceId;
+        }
+        cursor.close();
+        return voiceId;
+    }
+
+    protected String getVoiceUri(int voiceId){
+        SQLiteDatabase db = getReadableDatabase();
+        String sql = "SELECT uri FROM " + TABLE_VOICE + " WHERE _id=" + voiceId + ";";
+        String uri = null;
+        Cursor cursor = db.rawQuery(sql,null);
+        while(cursor.moveToNext()){
+            uri = cursor.getString(0);
+            return uri;
+        }
+        cursor.close();
+        return uri;
+    }
+
 }
