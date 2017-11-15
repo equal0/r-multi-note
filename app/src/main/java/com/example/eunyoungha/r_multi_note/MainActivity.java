@@ -70,7 +70,8 @@ public class MainActivity extends AppCompatActivity implements NoteAPICallback {
             int photoId = memoList.get(i).getId_photo();
             int videoId = memoList.get(i).getId_video();
             int voiceId = memoList.get(i).getId_voice();
-            memoListAdapter.addItem(new MemoList(id, date,context_text,photoId,videoId,voiceId));
+            int mapId = memoList.get(i).getId_map();
+            memoListAdapter.addItem(new MemoList(id, date,context_text,photoId,videoId,voiceId,mapId));
         }
        showingResult.setAdapter(memoListAdapter);
 
@@ -158,7 +159,8 @@ public class MainActivity extends AppCompatActivity implements NoteAPICallback {
             int photoId = mDataSet.get(i).getId_photo();
             int videoId = mDataSet.get(i).getId_video();
             int voiceId = mDataSet.get(i).getId_voice();
-            memoListAdapter.addItem(new MemoList(id, date,context_text,photoId,videoId,voiceId));
+            int mapId = mDataSet.get(i).getId_map();
+            memoListAdapter.addItem(new MemoList(id, date,context_text,photoId,videoId,voiceId,mapId));
         }
                 showingResult.setAdapter(memoListAdapter);
             }

@@ -18,6 +18,7 @@ import org.json.JSONObject;
     private int id_photo;
     private int id_video;
     private int id_voice;
+    private int id_map;
 
     public MemoList (JSONObject object){
         try{
@@ -26,17 +27,18 @@ import org.json.JSONObject;
             this.date = object.getString("date");
             this.id_photo = object.getInt("photoid");
         }catch (JSONException e){
-
+            e.printStackTrace();
         }
     }
 
-    public MemoList(int id, String date, String content_text,int id_photo, int id_video, int id_voice) {
+    public MemoList(int id, String date, String content_text,int id_photo, int id_video, int id_voice, int id_map) {
         this.id = id;
         this.date = date;
         this.content_text = content_text;
         this.id_photo = id_photo;
         this.id_video = id_video;
         this.id_voice = id_voice;
+        this.id_map = id_map;
     }
 
     public MemoList() {
@@ -49,6 +51,7 @@ import org.json.JSONObject;
         this.id_photo = source.readInt();
         this.id_video = source.readInt();
         this.id_voice = source.readInt();
+        this.id_map = source.readInt();
     }
 
     public int getId() {
@@ -99,6 +102,14 @@ import org.json.JSONObject;
         this.id_voice = id_voice;
     }
 
+    public int getId_map() {
+        return id_map;
+    }
+
+    public void setId_map(int id_map) {
+        this.id_map = id_map;
+    }
+
     @Override
     public int describeContents() {
         return 0;
@@ -112,6 +123,7 @@ import org.json.JSONObject;
         dest.writeInt(id_photo);
         dest.writeInt(id_video);
         dest.writeInt(id_voice);
+        dest.writeInt(id_map);
     }
 
     @SuppressWarnings("rawtypes")

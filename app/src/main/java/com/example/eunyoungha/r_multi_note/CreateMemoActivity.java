@@ -20,6 +20,7 @@ import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.provider.ContactsContract;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
@@ -102,14 +103,17 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     private static final int MEDIA_TYPE_VIDEO = 2;
     private static final int MEDIA_TYPE_VOICE = 3;
 
-    private static final String RECORD_FILE = "/sdcard/tmp_"+ String.valueOf(System.currentTimeMillis())+".mp4";
+    private static final int MAP_LATITUDE = 1;
+    private static final int MAP_LONGITUDE = 2;
+
+    private static final int NEW_MAP = 1;
+    private static final int CALL_MAP = 2;
 
     private Toolbar toolbar;
     private RelativeLayout mMemoTitle;
     private RelativeLayout mBackButton;
     private RelativeLayout mDoneButton;
     private EditText textEditView;
-    private ImageView mCheckBoxButton;
     private ImageView mInsertPhotoButton;
     private ImageView mInsertVideoButton;
     private ImageView mInsertVoiceButton;
@@ -120,13 +124,12 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     private RelativeLayout mMemoView;
     private RelativeLayout mVoice;
     private Button mPlayButton;
-    private Button mRecordButton;
-    private Button mStopButton;
 
     private DatabaseHelper dbHelper;
     private DatabaseHelper dbHelperPhoto;
     private DatabaseHelper dbHelperVideo;
     private DatabaseHelper dbHelperVoice;
+    private DatabaseHelper dbHelperMap;
 
     private MemoList memo;
 
@@ -135,9 +138,12 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     private Uri mVoiceUri;
     private File file =  null;
     private File videoFile = null;
-    private MediaPlayer player;
-    private MediaRecorder recorder;
     private String voicePath;
+
+    private boolean mapFlag = false;
+    private double mLatitude;
+    private double mLongitude;
+    private String mMarkerTitle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -160,6 +166,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         dbHelperPhoto = new DatabaseHelper(getApplicationContext(),"photo.db",null,1);
         dbHelperVideo = new DatabaseHelper(getApplicationContext(),"video.db",null,1);
         dbHelperVoice = new DatabaseHelper(getApplicationContext(),"voice.db",null,1);
+        dbHelperMap = new DatabaseHelper(getApplicationContext(),"map.db",null,1);
 
         //툴바 세팅
         toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -215,6 +222,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                     int photoId = -1;
                     int videoId = -1;
                     int voiceId = -1;
+                    int mapId = -1;
                     if(mImageUri != null){
                         String photoUri = mImageUri.toString();
                         dbHelperPhoto.photoInsert(date, photoUri);
@@ -233,7 +241,12 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                         voiceId = dbHelperVoice.getVoiceId(voiceUri);
                         //dbHelper.insert(date,content,photoId,videoId,voiceId);
                     }
-                    dbHelper.insert(date,content,photoId,videoId,voiceId);
+                    if(mLatitude != 0 && mLongitude != 0){
+                        String realTime = "time:"+String.valueOf(System.currentTimeMillis());
+                        dbHelperMap.mapInsert(date,mMarkerTitle,mLatitude,mLongitude,realTime);
+                        mapId = dbHelperMap.geMapId(realTime);
+                    }
+                    dbHelper.insert(date,content,photoId,videoId,voiceId,mapId);
                 }
                 listIntent();
             }
@@ -246,6 +259,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
             int photoId = memo.getId_photo();
             int videoId = memo.getId_video();
             int voiceId = memo.getId_voice();
+            int mapId = memo.getId_map();
             if(photoId != -1){
                 mImageUri = getUri(MEDIA_TYPE_PHOTO, photoId);
                 setPhoto();
@@ -255,6 +269,11 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
             }else if(voiceId != -1){
                 mVoiceUri = getUri(MEDIA_TYPE_VOICE,voiceId);
                 setVoice();
+            }
+            if(mapId != -1){
+                mLatitude = getLatLng(MAP_LATITUDE,mapId);
+                mLongitude = getLatLng(MAP_LONGITUDE,mapId);
+                setMap();
             }
 
             textEditView.setText(memo.getContent_text());
@@ -350,24 +369,19 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
 
     private void startLocationUpdates() {
         if (!checkLocationServicesStatus()) {
-
             Log.d(TAG, "startLocationUpdates : call showDialogForLocationServiceSetting");
             showDialogForLocationServiceSetting();
         }else {
-
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                     && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-
                 Log.d(TAG, "startLocationUpdates : 퍼미션 안가지고 있음");
                 return;
             }
-
             Log.d(TAG, "startLocationUpdates : call FusedLocationApi.requestLocationUpdates");
             LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, locationRequest, this);
             mRequestingLocationUpdates = true;
 
             mGoogleMap.setMyLocationEnabled(true);
-
         }
     }
 
@@ -384,7 +398,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         mGoogleMap = googleMap;
 
         //런타임 퍼미션 요청 대화상자나 GPS 활성 요청 대화상자 보이기전에
-        //지도의 초기위치를 서울로 이동
+        //지도의 초기위치를 crimson house 로 이동
         setDefaultLocation();
 
         //mGoogleMap.getUiSettings().setZoomControlsEnabled(false);
@@ -394,7 +408,6 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
 
             @Override
             public boolean onMyLocationButtonClick() {
-
                 Log.d( TAG, "onMyLocationButtonClick : 위치에 따른 카메라 이동 활성화");
                 mMoveMapByAPI = true;
                 return true;
@@ -423,10 +436,8 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         });
 
         mGoogleMap.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
-
             @Override
             public void onCameraMove() {
-
             }
         });
     }
@@ -436,11 +447,16 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         Log.d(TAG, "onLocationChanged : ");
 
         String markerTitle = getCurrentAddress(location);
-        String markerSnippet = "위도:" + String.valueOf(location.getLatitude())
-                + " 경도:" + String.valueOf(location.getLongitude());
+        String markerSnippet = "latitude:" + String.valueOf(location.getLatitude())
+                + " longitude:" + String.valueOf(location.getLongitude());
 
         //현재 위치에 마커 생성하고 이동
-        setCurrentLocation(location, markerTitle, markerSnippet);
+        if(!mapFlag){
+            setCurrentLocation(location, markerTitle, markerSnippet,NEW_MAP);
+        }else{
+            setCurrentLocation(location, markerTitle, markerSnippet,CALL_MAP);
+        }
+
 
         mCurrentLocatiion = location;
     }
@@ -448,24 +464,19 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     @Override
     protected void onStart() {
         if(mGoogleApiClient != null && mGoogleApiClient.isConnected() == false){
-
             Log.d(TAG, "onStart: mGoogleApiClient connect");
             mGoogleApiClient.connect();
         }
         super.onStart();
-
-
     }
 
     @Override
     protected void onStop() {
         if (mRequestingLocationUpdates) {
-
             Log.d(TAG, "onStop : call stopLocationUpdates");
             stopLocationUpdates();
         }
         if ( mGoogleApiClient.isConnected()) {
-
             Log.d(TAG, "onStop : mGoogleApiClient disconnect");
             mGoogleApiClient.disconnect();
         }
@@ -475,28 +486,20 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     @Override
     public void onConnected(Bundle connectionHint) {
         if ( mRequestingLocationUpdates == false ) {
-
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-
                 int hasFineLocationPermission = ContextCompat.checkSelfPermission(this,
                         Manifest.permission.ACCESS_FINE_LOCATION);
-
                 if (hasFineLocationPermission == PackageManager.PERMISSION_DENIED) {
-
                     ActivityCompat.requestPermissions(mActivity,
                             new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
                             PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
-
                 } else {
-
                     Log.d(TAG, "onConnected : 퍼미션 가지고 있음");
                     Log.d(TAG, "onConnected : call startLocationUpdates");
                     startLocationUpdates();
                     mGoogleMap.setMyLocationEnabled(true);
                 }
-
             }else{
-
                 Log.d(TAG, "onConnected : call startLocationUpdates");
                 startLocationUpdates();
                 mGoogleMap.setMyLocationEnabled(true);
@@ -506,14 +509,12 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
 
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
-
         Log.d(TAG, "onConnectionFailed");
 //        setDefaultLocation();
     }
 
     @Override
     public void onConnectionSuspended(int cause) {
-
         Log.d(TAG, "onConnectionSuspended");
         if (cause == CAUSE_NETWORK_LOST)
             Log.e(TAG, "onConnectionSuspended(): Google Play services " +
@@ -526,9 +527,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     public String getCurrentAddress(Location location) {
         //지오코더... GPS를 주소로 변환
         Geocoder geocoder = new Geocoder(this, Locale.getDefault());
-
         List<Address> addresses;
-
         try {
             addresses = geocoder.getFromLocation(
                     location.getLatitude(),
@@ -542,7 +541,6 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
             Toast.makeText(this, "잘못된 GPS 좌표", Toast.LENGTH_LONG).show();
             return "잘못된 GPS 좌표";
         }
-
         if (addresses == null || addresses.size() == 0) {
             Toast.makeText(this, "주소 미발견", Toast.LENGTH_LONG).show();
             return "주소 미발견";
@@ -553,35 +551,39 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         }
     }
 
-
     public boolean checkLocationServicesStatus() {
         LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
                 || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
     }
 
-
-    public void setCurrentLocation(Location location, String markerTitle, String markerSnippet) {
+    public void setCurrentLocation(Location location, String markerTitle, String markerSnippet,int type) {
         mMoveMapByUser = false;
 
         if (currentMarker != null) currentMarker.remove();
 
-        LatLng currentLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+        LatLng currentLatLng = null;
+        if(type == NEW_MAP){
+            currentLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+            mLatitude = location.getLatitude();
+            mLongitude = location.getLongitude();
+            mMarkerTitle = markerTitle;
+        }else{
+            currentLatLng = new LatLng(35.05, 127.0);
+        }
 
         //구글맵의 디폴트 현재 위치는 파란색 동그라미로 표시
         //마커를 원하는 이미지로 변경하여 현재 위치 표시하도록 수정해야함.
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(currentLatLng);
-        markerOptions.title(markerTitle);
-        markerOptions.snippet(markerSnippet);
+        markerOptions.title(mMarkerTitle);
+        //markerOptions.snippet(markerSnippet);
         markerOptions.draggable(true);
         markerOptions.icon(BitmapDescriptorFactory
                 .defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
         currentMarker = mGoogleMap.addMarker(markerOptions);
 
         if ( mMoveMapByAPI ) {
-
             Log.d( TAG, "setCurrentLocation :  mGoogleMap moveCamera "
                     + location.getLatitude() + " " + location.getLongitude() ) ;
             // CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(currentLatLng, 15);
@@ -590,12 +592,11 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         }
     }
 
-
     public void setDefaultLocation() {
         mMoveMapByUser = false;
 
-        //디폴트 위치, Seoul
-        LatLng DEFAULT_LOCATION = new LatLng(37.56, 126.97);
+        //default location, crimson house
+        LatLng DEFAULT_LOCATION = new LatLng(35.610508, 139.630020);
         String markerTitle = "위치정보 가져올 수 없음";
         String markerSnippet = "위치 퍼미션과 GPS 활성 요부 확인하세요";
 
@@ -745,6 +746,16 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
             uri = Uri.parse(voiceUri);
         }
         return uri;
+    }
+
+    protected double getLatLng(int type, int id){
+        double latLng = 0;
+        if(type == MAP_LATITUDE){
+            latLng = dbHelperMap.getMapLatitude(id);
+        }else if(type == MAP_LONGITUDE){
+            latLng = dbHelperMap.getMapLongitude(id);
+        }
+        return latLng;
     }
 
     protected void selectPhotoMethod(){
@@ -993,6 +1004,11 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
 
             }
         });
+    }
+
+    protected void setMap(){
+        changeMargin();
+        mapLayout.setVisibility(View.VISIBLE);
     }
 
     protected void changeMargin(){

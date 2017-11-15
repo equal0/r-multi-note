@@ -18,6 +18,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     final String TABLE_PHOTO = "PHOTO";
     final String TABLE_VIDEO = "VIDEO";
     final String TABLE_VOICE = "VOICE";
+    final String TABLE_MAP = "MAP";
 
     final String ID = "_id";
     final String INPUT_DATE = "input_date";
@@ -25,9 +26,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     final String ID_PHOTO = "id_photo";
     final String ID_VIDEO = "id_video";
     final String ID_VOICE = "id_voice";
+    final String ID_MAP = "id_map";
 
     final String URI = "uri";
-
+    final String MAKER_NAME = "marker_name";
+    final String LATITUDE = "latitude";
+    final String LONGITUDE = "longitude";
+    final String REALTIME = "real_time";
 
     public DatabaseHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
         super(context, name, factory, version);
@@ -44,6 +49,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     + ","+ID_PHOTO+" INTEGER"
                     + ","+ID_VIDEO+" INTEGER"
                     + ","+ID_VOICE+" INTEGER"
+                    + ","+ID_MAP+" INTEGER"
                     + ")"
         );
 
@@ -92,6 +98,24 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 + TABLE_VOICE + "(" + URI + ");"
         );
 
+        db.execSQL("CREATE TABLE "
+                + TABLE_MAP
+                + "("
+                +"_id INTEGER PRIMARY KEY AUTOINCREMENT"
+                +"," + INPUT_DATE + " TEXT"
+                +"," + MAKER_NAME + " TEXT"
+                +"," + LATITUDE + " REAL"
+                +"," + LONGITUDE + " REAL"
+                +"," + REALTIME + " TEXT"
+                +")"
+        );
+
+        db.execSQL("CREATE INDEX "
+                + TABLE_MAP + "_IDX"
+                + " ON "
+                + TABLE_MAP + "(" + MAKER_NAME + ");"
+        );
+
     }
 
     @Override
@@ -100,10 +124,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     //우선 텍스트메모만 저장 가능한 상황이라고 가정, 날짜와 텍스트만 저장한다
-    protected void insert(String date, String content, int photoId, int videoId, int voiceId){
+    protected void insert(String date, String content, int photoId, int videoId, int voiceId, int mapId){
         SQLiteDatabase db = getWritableDatabase();
 
-        String insertSql = "INSERT INTO " + TABLE_MEMO + " VALUES(null,'"+date+"','"+content+"',"+photoId+","+videoId+", "+voiceId+");";
+        String insertSql = "INSERT INTO " + TABLE_MEMO + " VALUES(null,'"+date+"','"+content+"',"+photoId+","+videoId+", "+voiceId+","+mapId+");";
         db.execSQL(insertSql);
     }
 
@@ -131,12 +155,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         int id_photo;
         int id_video;
         int id_voice;
+        int id_map;
 
         ArrayList<MemoList> memoList = new ArrayList<>();
 
         SQLiteDatabase db = getReadableDatabase();
 
-        String selectQuery = "SELECT " + ID + ", " + INPUT_DATE + ", " +CONTEXT_TEXT + ", " + ID_PHOTO +", " + ID_VIDEO +"," + ID_VOICE + " FROM " + TABLE_MEMO + " ORDER BY _id desc";
+        //String selectQuery = "SELECT " + ID + ", " + INPUT_DATE + ", " +CONTEXT_TEXT + ", " + ID_PHOTO +", " + ID_VIDEO +"," + ID_VOICE + " FROM " + TABLE_MEMO + " ORDER BY _id desc";
+        String selectQuery = "SELECT *" + " FROM " + TABLE_MEMO + " ORDER BY _id desc";
 
         Cursor cursor = db.rawQuery(selectQuery,null);
 
@@ -147,8 +173,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             id_photo = cursor.getInt(3);
             id_video = cursor.getInt(4);
             id_voice = cursor.getInt(5);
+            id_map = cursor.getInt(6);
 
-            MemoList memo = new MemoList(id, date, context_text,id_photo,id_video,id_voice);
+            MemoList memo = new MemoList(id, date, context_text,id_photo,id_video,id_voice,id_map);
 
             memoList.add(memo);
         }
@@ -255,4 +282,49 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return uri;
     }
 
+    protected void mapInsert(String date, String markerName, double latitude, double longitude, String realTime){
+        SQLiteDatabase db = getWritableDatabase();
+
+        String sql = "INSERT INTO " + TABLE_MAP + " VALUES(null,'" + date + "','" +markerName + "'," + latitude +"," + longitude + ",'"+realTime+"');";
+        db.execSQL(sql);
+    }
+
+    protected int geMapId(String realTime){
+        SQLiteDatabase db = getReadableDatabase();
+        String sql = "SELECT _id FROM " + TABLE_MAP +" where "+REALTIME+"='"+realTime+"';";
+        int mapId = -1;
+        Cursor cursor = db.rawQuery(sql,null);
+        while(cursor.moveToNext()){
+            mapId = cursor.getInt(0);
+            return mapId;
+        }
+        cursor.close();
+        return mapId;
+    }
+
+    protected double getMapLatitude(int mapId){
+        SQLiteDatabase db = getReadableDatabase();
+        String sql = "SELECT " +LATITUDE +" FROM " + TABLE_MAP + " WHERE _id=" + mapId + ";";
+        double latitude = 0;
+        Cursor cursor = db.rawQuery(sql,null);
+        while(cursor.moveToNext()){
+            latitude = cursor.getDouble(0);
+            return latitude;
+        }
+        cursor.close();
+        return latitude;
+    }
+
+    protected double getMapLongitude(int mapId){
+        SQLiteDatabase db = getReadableDatabase();
+        String sql = "SELECT " + LONGITUDE +" FROM " + TABLE_MAP + " WHERE _id=" + mapId + ";";
+        double longitude = 0;
+        Cursor cursor = db.rawQuery(sql,null);
+        while(cursor.moveToNext()){
+            longitude = cursor.getDouble(0);
+            return longitude;
+        }
+        cursor.close();
+        return longitude;
+    }
 }
