@@ -1,10 +1,12 @@
-package com.example.eunyoungha.r_multi_note;
+package com.example.eunyoungha.r_multi_note.utils;
 
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
+
+import com.example.eunyoungha.r_multi_note.models.MemoList;
 
 import java.util.ArrayList;
 
@@ -124,14 +126,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     //우선 텍스트메모만 저장 가능한 상황이라고 가정, 날짜와 텍스트만 저장한다
-    protected void insert(String date, String content, int photoId, int videoId, int voiceId, int mapId){
+    public void insert(String date, String content, int photoId, int videoId, int voiceId, int mapId){
         SQLiteDatabase db = getWritableDatabase();
 
         String insertSql = "INSERT INTO " + TABLE_MEMO + " VALUES(null,'"+date+"','"+content+"',"+photoId+","+videoId+", "+voiceId+","+mapId+");";
         db.execSQL(insertSql);
     }
 
-    protected void update(int id, String content){
+    public void update(int id, String content){
         SQLiteDatabase db = getWritableDatabase();
 
         String updateSql = "UPDATE " + TABLE_MEMO + " SET " + CONTEXT_TEXT + "='" +content
@@ -140,7 +142,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         Log.d("TEST",updateSql);
     }
 
-    protected void delete(int id){
+    public void delete(int id){
         SQLiteDatabase db = getReadableDatabase();
 
         String deleteSql = "DELETE FROM " + TABLE_MEMO + " WHERE " + ID + "=" + id + ";";
@@ -148,7 +150,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL(deleteSql);
     }
 
-    protected ArrayList<MemoList> getResult() {
+    public ArrayList<MemoList> getResult() {
         int id;
         String date;
         String context_text;
@@ -183,14 +185,49 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return memoList;
     }
 
-    protected void photoInsert(String date, String uri){
+    public ArrayList<MemoList> getSearchResult(String searchText) {
+        int id;
+        String date;
+        String context_text;
+        int id_photo;
+        int id_video;
+        int id_voice;
+        int id_map;
+
+        ArrayList<MemoList> memoList = new ArrayList<>();
+
+        SQLiteDatabase db = getReadableDatabase();
+
+        //String selectQuery = "SELECT " + ID + ", " + INPUT_DATE + ", " +CONTEXT_TEXT + ", " + ID_PHOTO +", " + ID_VIDEO +"," + ID_VOICE + " FROM " + TABLE_MEMO + " ORDER BY _id desc";
+        String selectQuery = "SELECT *" + " FROM " + TABLE_MEMO + " WHERE "+ CONTEXT_TEXT+" LIKE '%"+searchText+"%' ORDER BY _id desc";
+
+        Cursor cursor = db.rawQuery(selectQuery,null);
+
+        while(cursor.moveToNext()){
+            id = cursor.getInt(0);
+            date = cursor.getString(1);
+            context_text = cursor.getString(2);
+            id_photo = cursor.getInt(3);
+            id_video = cursor.getInt(4);
+            id_voice = cursor.getInt(5);
+            id_map = cursor.getInt(6);
+
+            MemoList memo = new MemoList(id, date, context_text,id_photo,id_video,id_voice,id_map);
+
+            memoList.add(memo);
+        }
+        cursor.close();
+        return memoList;
+    }
+
+    public void photoInsert(String date, String uri){
         SQLiteDatabase db = getWritableDatabase();
 
         String sql = "INSERT INTO " + TABLE_PHOTO + " VALUES(null,'" + date + "','" +uri + "');";
         db.execSQL(sql);
     }
 
-    protected int getPhotoId(String uri){
+    public int getPhotoId(String uri){
         SQLiteDatabase db = getReadableDatabase();
         String sql = "SELECT _id FROM " + TABLE_PHOTO +" where uri = '" + uri +"';";
         int photoId = -1;
@@ -203,7 +240,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return photoId;
     }
 
-    protected String getPhotoUri(int photoId){
+    public String getPhotoUri(int photoId){
         SQLiteDatabase db = getReadableDatabase();
         String sql = "SELECT uri FROM " + TABLE_PHOTO + " WHERE _id=" + photoId + ";";
         String uri = null;
@@ -216,14 +253,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return uri;
     }
 
-    protected void videoInsert(String date, String uri){
+    public void videoInsert(String date, String uri){
         SQLiteDatabase db = getWritableDatabase();
 
         String sql = "INSERT INTO " + TABLE_VIDEO + " VALUES(null,'" + date + "','" +uri + "');";
         db.execSQL(sql);
     }
 
-    protected int getVideoId(String uri){
+    public int getVideoId(String uri){
         SQLiteDatabase db = getReadableDatabase();
         String sql = "SELECT _id FROM " + TABLE_VIDEO +" where uri = '" + uri +"';";
         int videoId = -1;
@@ -236,7 +273,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return videoId;
     }
 
-    protected String getVideoUri(int videoId){
+    public String getVideoUri(int videoId){
         SQLiteDatabase db = getReadableDatabase();
         String sql = "SELECT uri FROM " + TABLE_VIDEO + " WHERE _id=" + videoId + ";";
         String uri = null;
@@ -249,14 +286,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return uri;
     }
 
-    protected void voiceInsert(String date, String uri){
+    public void voiceInsert(String date, String uri){
         SQLiteDatabase db = getWritableDatabase();
 
         String sql = "INSERT INTO " + TABLE_VOICE + " VALUES(null,'" + date + "','" +uri + "');";
         db.execSQL(sql);
     }
 
-    protected int getVoiceId(String uri){
+    public int getVoiceId(String uri){
         SQLiteDatabase db = getReadableDatabase();
         String sql = "SELECT _id FROM " + TABLE_VOICE +" where uri = '" + uri +"';";
         int voiceId = -1;
@@ -269,7 +306,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return voiceId;
     }
 
-    protected String getVoiceUri(int voiceId){
+    public String getVoiceUri(int voiceId){
         SQLiteDatabase db = getReadableDatabase();
         String sql = "SELECT uri FROM " + TABLE_VOICE + " WHERE _id=" + voiceId + ";";
         String uri = null;
@@ -282,14 +319,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return uri;
     }
 
-    protected void mapInsert(String date, String markerName, double latitude, double longitude, String realTime){
+    public void mapInsert(String date, String markerName, double latitude, double longitude, String realTime){
         SQLiteDatabase db = getWritableDatabase();
 
         String sql = "INSERT INTO " + TABLE_MAP + " VALUES(null,'" + date + "','" +markerName + "'," + latitude +"," + longitude + ",'"+realTime+"');";
         db.execSQL(sql);
     }
 
-    protected int geMapId(String realTime){
+    public int geMapId(String realTime){
         SQLiteDatabase db = getReadableDatabase();
         String sql = "SELECT _id FROM " + TABLE_MAP +" where "+REALTIME+"='"+realTime+"';";
         int mapId = -1;
@@ -302,7 +339,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return mapId;
     }
 
-    protected double getMapLatitude(int mapId){
+    public double getMapLatitude(int mapId){
         SQLiteDatabase db = getReadableDatabase();
         String sql = "SELECT " +LATITUDE +" FROM " + TABLE_MAP + " WHERE _id=" + mapId + ";";
         double latitude = 0;
@@ -315,7 +352,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return latitude;
     }
 
-    protected double getMapLongitude(int mapId){
+    public double getMapLongitude(int mapId){
         SQLiteDatabase db = getReadableDatabase();
         String sql = "SELECT " + LONGITUDE +" FROM " + TABLE_MAP + " WHERE _id=" + mapId + ";";
         double longitude = 0;

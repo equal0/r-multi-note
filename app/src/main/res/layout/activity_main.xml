@@ -19,10 +19,33 @@
             layout="@layout/toolbar"/>
 
         <RelativeLayout
+            android:id="@+id/search_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/toolbar"
+            android:visibility="gone"
+            android:background="#d6d6d6"
+            >
+                <EditText
+                    android:id="@+id/search_memo_bar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    />
+                <Button
+                    android:id="@+id/search_memo_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="search"
+                    android:layout_alignParentRight="true"
+                    />
+
+        </RelativeLayout>
+        
+        <RelativeLayout
             android:id="@+id/main_showing_memo"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_below="@+id/toolbar"
+            android:layout_below="@+id/search_layout"
             >
 
             <!-- 텍스트뷰를 빼고 리스트 뷰 넣기 / 리스트뷰에 담길 하나하나의 아이템을 정의하는 뷰/ -->

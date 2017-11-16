@@ -1,4 +1,4 @@
-package com.example.eunyoungha.r_multi_note;
+package com.example.eunyoungha.r_multi_note.activities;
 
 import android.Manifest;
 import android.annotation.TargetApi;
@@ -16,11 +16,9 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.media.ExifInterface;
 import android.media.MediaPlayer;
-import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
-import android.provider.ContactsContract;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
@@ -41,6 +39,9 @@ import android.widget.RelativeLayout;
 import android.widget.Toast;
 import android.widget.VideoView;
 
+import com.example.eunyoungha.r_multi_note.utils.DatabaseHelper;
+import com.example.eunyoungha.r_multi_note.models.MemoList;
+import com.example.eunyoungha.r_multi_note.R;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
@@ -78,13 +79,13 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     private static final String TAG = "googlemap_example";
     private static final int GPS_ENABLE_REQUEST_CODE = 2001;
     private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 2002;
-    private static final int UPDATE_INTERVAL_MS = 1000;  // 1초
-    private static final int FASTEST_UPDATE_INTERVAL_MS = 500; // 0.5초
+    private static final int UPDATE_INTERVAL_MS = 1000;  // 1sec
+    private static final int FASTEST_UPDATE_INTERVAL_MS = 500; // 0.5sec
 
     private AppCompatActivity mActivity;
     boolean askPermissionOnceAgain = false;
     boolean mRequestingLocationUpdates = false;
-    Location mCurrentLocatiion;
+    Location mCurrentLocation;
     boolean mMoveMapByUser = true;
     boolean mMoveMapByAPI = true;
 
@@ -113,7 +114,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     private RelativeLayout mMemoTitle;
     private RelativeLayout mBackButton;
     private RelativeLayout mDoneButton;
-    private EditText textEditView;
+    private EditText mEditText;
     private ImageView mInsertPhotoButton;
     private ImageView mInsertVideoButton;
     private ImageView mInsertVoiceButton;
@@ -124,6 +125,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     private RelativeLayout mMemoView;
     private RelativeLayout mVoice;
     private Button mPlayButton;
+    private LinearLayout mMultiButtons;
 
     private DatabaseHelper dbHelper;
     private DatabaseHelper dbHelperPhoto;
@@ -131,7 +133,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     private DatabaseHelper dbHelperVoice;
     private DatabaseHelper dbHelperMap;
 
-    private MemoList memo;
+    private MemoList mMemo;
 
     private Uri mImageUri;
     private Uri mVideoUri;
@@ -168,28 +170,24 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         dbHelperVoice = new DatabaseHelper(getApplicationContext(),"voice.db",null,1);
         dbHelperMap = new DatabaseHelper(getApplicationContext(),"map.db",null,1);
 
-        //툴바 세팅
+        //Toolbar setup
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        //툴바 타이틀 세팅
+        //Toolbar title setup
         mMemoTitle = (RelativeLayout) findViewById(R.id.layout_toolbar_new_memo_title);
         mMemoTitle.setVisibility(View.VISIBLE);
 
-        //메모 내용이 들어가는 뷰 초기화
+        //Get view references
         mMemoView = (RelativeLayout) findViewById(R.id.memo_text_view);
-        textEditView = (EditText) findViewById(R.id.memo_text_edit);
-
-        //사진, 비디오, 보이스, 맵 등이 들어가는 레이아웃
+        mEditText = (EditText) findViewById(R.id.memo_text_edit);
         mMultiMemoView = (RelativeLayout) findViewById(R.id.memo_multi_view);
         mPhoto = (ImageView) findViewById(R.id.memo_multi_view_photo);
         mVideo = (VideoView) findViewById(R.id.memo_multi_view_video);
         mapLayout = (RelativeLayout) findViewById(R.id.map_layout);
         mVoice = (RelativeLayout) findViewById(R.id.voice_layout);
         mPlayButton = (Button) findViewById(R.id.play_button);
-
-        //메모 화면 하단의 버튼들
-        LinearLayout multiButtons = (LinearLayout) findViewById(R.id.layout_multi_bar);
+        mMultiButtons = (LinearLayout) findViewById(R.id.layout_multi_bar);
         mInsertPhotoButton = (ImageView) findViewById(R.id.multi_photo_button);
         mInsertVideoButton = (ImageView) findViewById(R.id.multi_video_button);
         mInsertVoiceButton = (ImageView) findViewById(R.id.multi_voice_button);
@@ -199,7 +197,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        //툴바 백버튼 아이콘 세팅
+        //Toolbar backbutton setup
         mBackButton = (RelativeLayout) findViewById(R.id.layout_toolbar_back_button);
         mBackButton.setVisibility(View.VISIBLE);
         mBackButton.setOnClickListener(new View.OnClickListener() {
@@ -209,14 +207,14 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
             }
         });
 
-        //새로운 메모 작성 시의 툴바 Done 버튼 세팅
+        //Toolbar Done button when user creates new memo
         mDoneButton = (RelativeLayout) findViewById(R.id.layout_toolbar_done_button);
         mDoneButton.setVisibility(View.VISIBLE);
         mDoneButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 String date = currentDate();
-                String content = textEditView.getText().toString();
+                String content = mEditText.getText().toString();
 
                 if(content.length() != 0){
                     int photoId = -1;
@@ -252,14 +250,20 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
             }
         });
 
-        //이미 작성된 메모를 클릭했을 때 화면 및 Done 버튼 세팅
+        //Display and toolbar Done button when user clicked list item in MainActivity
         if(getIntent().getBundleExtra("bundle") != null){
-            memo = getIntent().getParcelableExtra("memo");
 
-            int photoId = memo.getId_photo();
-            int videoId = memo.getId_video();
-            int voiceId = memo.getId_voice();
-            int mapId = memo.getId_map();
+            mInsertPhotoButton.setVisibility(View.GONE);
+            mInsertVideoButton.setVisibility(View.GONE);
+            mInsertVoiceButton.setVisibility(View.GONE);
+            mInsertMapButton.setVisibility(View.GONE);
+
+            mMemo = getIntent().getParcelableExtra("memo");
+
+            int photoId = mMemo.getId_photo();
+            int videoId = mMemo.getId_video();
+            int voiceId = mMemo.getId_voice();
+            int mapId = mMemo.getId_map();
             if(photoId != -1){
                 mImageUri = getUri(MEDIA_TYPE_PHOTO, photoId);
                 setPhoto();
@@ -276,22 +280,22 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                 setMap();
             }
 
-            textEditView.setText(memo.getContent_text());
-            textEditView.setSelection(textEditView.length());
+            mEditText.setText(mMemo.getContent_text());
+            mEditText.setSelection(mEditText.length());
 
-            //Delete 버튼 생성
+            //Delete button
             ImageView mDeleteButton = new ImageView(getApplicationContext());
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
             params.leftMargin = 50;
             mDeleteButton.setLayoutParams(params);
             mDeleteButton.setImageResource(R.drawable.icon_trash_can_button);
-            multiButtons.addView(mDeleteButton);
+            mMultiButtons.addView(mDeleteButton);
 
             mDoneButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    int id = memo.getId();
-                    String context_text = textEditView.getText().toString();
+                    int id = mMemo.getId();
+                    String context_text = mEditText.getText().toString();
 
                     if(context_text.length() == 0){
                         dbHelper.delete(id);
@@ -302,35 +306,29 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                     listIntent();
                 }
             });
-
-            //Delete 버튼을 눌렀을 때 동작
             mDeleteButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    int id = memo.getId();
+                    int id = mMemo.getId();
                     dbHelper.delete(id);
                     listIntent();
                 }
             });
         }
 
-        //멀티바의 사진버튼을 눌렀을 때 동작
+        //multi-bar setup when user creates new memo
         mInsertPhotoButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 selectPhotoMethod();
             }
         });
-
-        //멀티바의 비디오버튼을 눌렀을 때 동작
         mInsertVideoButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 selectVideoMethod();
             }
         });
-
-        //멀티바의 보이스버튼을 눌렀을 때 동작
         mInsertVoiceButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -338,8 +336,6 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
              startActivityForResult(intent,REQUEST_RECORD_VOICE);
             }
         });
-
-        //멀티바의 맵버튼을 눌렀을 때 동작
         mInsertMapButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -352,12 +348,10 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     @Override
     public void onResume() {
         super.onResume();
-
         if (mGoogleApiClient.isConnected()) {
             Log.d(TAG, "onResume : call startLocationUpdates");
             if (!mRequestingLocationUpdates) startLocationUpdates();
         }
-
         //앱 정보에서 퍼미션을 허가했는지를 다시 검사해봐야 한다.
         if (askPermissionOnceAgain) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -397,11 +391,9 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
 
         mGoogleMap = googleMap;
 
-        //런타임 퍼미션 요청 대화상자나 GPS 활성 요청 대화상자 보이기전에
-        //지도의 초기위치를 crimson house 로 이동
+        //Before displaying dialog and others, the default location is crimson house
         setDefaultLocation();
 
-        //mGoogleMap.getUiSettings().setZoomControlsEnabled(false);
         mGoogleMap.getUiSettings().setMyLocationButtonEnabled(true);
         mGoogleMap.animateCamera(CameraUpdateFactory.zoomTo(15));
         mGoogleMap.setOnMyLocationButtonClickListener(new GoogleMap.OnMyLocationButtonClickListener(){
@@ -415,7 +407,6 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         });
 
         mGoogleMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
-
             @Override
             public void onMapClick(LatLng latLng) {
                 Log.d( TAG, "onMapClick :");
@@ -423,7 +414,6 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         });
 
         mGoogleMap.setOnCameraMoveStartedListener(new GoogleMap.OnCameraMoveStartedListener() {
-
             @Override
             public void onCameraMoveStarted(int i) {
                 if (mMoveMapByUser == true && mRequestingLocationUpdates){
@@ -450,15 +440,14 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         String markerSnippet = "latitude:" + String.valueOf(location.getLatitude())
                 + " longitude:" + String.valueOf(location.getLongitude());
 
-        //현재 위치에 마커 생성하고 이동
+        //Create marker at current location when user creates new memo
+        //or create marker at saved location when user clicked list item
         if(!mapFlag){
-            setCurrentLocation(location, markerTitle, markerSnippet,NEW_MAP);
+            setCurrentLocation(location, markerTitle,NEW_MAP);
         }else{
-            setCurrentLocation(location, markerTitle, markerSnippet,CALL_MAP);
+            setCurrentLocation(location, markerTitle,CALL_MAP);
         }
-
-
-        mCurrentLocatiion = location;
+        mCurrentLocation = location;
     }
 
     @Override
@@ -510,7 +499,6 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
         Log.d(TAG, "onConnectionFailed");
-//        setDefaultLocation();
     }
 
     @Override
@@ -524,8 +512,8 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                     "connection lost.  Cause: service disconnected");
     }
 
-    public String getCurrentAddress(Location location) {
-        //지오코더... GPS를 주소로 변환
+    protected String getCurrentAddress(Location location) {
+        //geo coder... transfer the location to address
         Geocoder geocoder = new Geocoder(this, Locale.getDefault());
         List<Address> addresses;
         try {
@@ -534,7 +522,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                     location.getLongitude(),
                     1);
         } catch (IOException ioException) {
-            //네트워크 문제
+            //Network problem
             Toast.makeText(this, "지오코더 서비스 사용불가", Toast.LENGTH_LONG).show();
             return "지오코더 서비스 사용불가";
         } catch (IllegalArgumentException illegalArgumentException) {
@@ -551,33 +539,30 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         }
     }
 
-    public boolean checkLocationServicesStatus() {
+    protected boolean checkLocationServicesStatus() {
         LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
                 || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
     }
 
-    public void setCurrentLocation(Location location, String markerTitle, String markerSnippet,int type) {
+    protected void setCurrentLocation(Location location, String markerTitle,int type) {
         mMoveMapByUser = false;
-
         if (currentMarker != null) currentMarker.remove();
 
-        LatLng currentLatLng = null;
+        LatLng currentLatLng;
         if(type == NEW_MAP){
             currentLatLng = new LatLng(location.getLatitude(), location.getLongitude());
             mLatitude = location.getLatitude();
             mLongitude = location.getLongitude();
             mMarkerTitle = markerTitle;
         }else{
-            currentLatLng = new LatLng(35.05, 127.0);
+            currentLatLng = new LatLng(mLatitude, mLongitude);
         }
 
-        //구글맵의 디폴트 현재 위치는 파란색 동그라미로 표시
-        //마커를 원하는 이미지로 변경하여 현재 위치 표시하도록 수정해야함.
+        //Marker setup
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(currentLatLng);
         markerOptions.title(mMarkerTitle);
-        //markerOptions.snippet(markerSnippet);
         markerOptions.draggable(true);
         markerOptions.icon(BitmapDescriptorFactory
                 .defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
@@ -709,7 +694,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     }
 
 
-    //여기부터는 GPS 활성화를 위한 메소드들
+    //Activating GPS
     private void showDialogForLocationServiceSetting() {
 
         android.support.v7.app.AlertDialog.Builder builder = new android.support.v7.app.AlertDialog.Builder(CreateMemoActivity.this);
@@ -807,7 +792,6 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                         switch (which){
                             case 0: //take video 를 눌렀을 때 동작
                                 Intent intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
-                                //빌드버전에 따라 분기처리해주어야 할 수도 있음
                                 if(intent.resolveActivity(getPackageManager()) != null){
                                     try{
                                         videoFile = createFile(MEDIA_TYPE_VIDEO);
@@ -856,7 +840,6 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     }
 
     protected String currentDate(){
-
         Long now = System.currentTimeMillis();
         Date date = new Date(now);
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy/MM/dd");
@@ -891,21 +874,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                 if(resultCode == RESULT_OK){
                     Uri uri = data.getData();
                     mVideoUri = uri;
-                    changeMargin();
-                    mVideo.setVisibility(View.VISIBLE);
-                    String path = getPath(mVideoUri);
-                    mVideo.setVideoPath(path);
-                    //mVideo.setVideoURI(mVideoUri);
-                    final MediaController mediaController = new MediaController(this);
-                    mVideo.setMediaController(mediaController);
-                    mVideo.start();
-                    mVideo.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            mediaController.show(0);
-                            mVideo.pause();
-                        }
-                    },100);
+                    setVideo();
                 }else Toast.makeText(getApplicationContext(),"didn't respond",Toast.LENGTH_SHORT).show();
                 break;
             case REQUEST_RECORD_VOICE:
@@ -916,16 +885,11 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                 }else Toast.makeText(getApplicationContext(),"didn't respond",Toast.LENGTH_SHORT).show();
                 break;
             case GPS_ENABLE_REQUEST_CODE:
-
-                //사용자가 GPS 활성 시켰는지 검사
+                //Check if user ae
                 if (checkLocationServicesStatus()) {
                     if (checkLocationServicesStatus()) {
-
                         Log.d(TAG, "onActivityResult : 퍼미션 가지고 있음");
-
-
                         if ( mGoogleApiClient.isConnected() == false ) {
-
                             Log.d( TAG, "onActivityResult : mGoogleApiClient connect ");
                             mGoogleApiClient.connect();
                         }

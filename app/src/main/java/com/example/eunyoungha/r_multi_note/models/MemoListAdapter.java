@@ -1,4 +1,4 @@
-package com.example.eunyoungha.r_multi_note;
+package com.example.eunyoungha.r_multi_note.models;
 
 import android.content.Context;
 import android.view.LayoutInflater;
@@ -6,6 +6,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
+
+import com.example.eunyoungha.r_multi_note.R;
 
 import java.util.ArrayList;
 

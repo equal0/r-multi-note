@@ -1,4 +1,4 @@
-package com.example.eunyoungha.r_multi_note;
+package com.example.eunyoungha.r_multi_note.activities;
 
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentStatePagerAdapter;
@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.view.Window;
 import android.widget.Button;
 
+import com.example.eunyoungha.r_multi_note.R;
 import com.example.eunyoungha.r_multi_note.fragments.FragmentStartOne;
 import com.example.eunyoungha.r_multi_note.fragments.FragmentStartThree;
 import com.example.eunyoungha.r_multi_note.fragments.FragmentStartTwo;

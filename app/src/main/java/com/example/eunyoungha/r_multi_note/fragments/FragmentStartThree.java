@@ -7,11 +7,9 @@ import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.RelativeLayout;
-import android.widget.Toast;
 
-import com.example.eunyoungha.r_multi_note.MainActivity;
+import com.example.eunyoungha.r_multi_note.activities.MainActivity;
 import com.example.eunyoungha.r_multi_note.R;
 
 /**

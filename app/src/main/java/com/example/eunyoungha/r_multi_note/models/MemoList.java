@@ -1,4 +1,4 @@
-package com.example.eunyoungha.r_multi_note;
+package com.example.eunyoungha.r_multi_note.models;
 
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -10,7 +10,7 @@ import org.json.JSONObject;
  * Created by eunyoung.ha on 2017/10/20.
  */
 
- class MemoList implements Parcelable{
+public class MemoList implements Parcelable{
 
     private int id;
     private String date;
