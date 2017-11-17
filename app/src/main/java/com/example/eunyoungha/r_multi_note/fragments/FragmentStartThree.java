@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.RelativeLayout;
 
+import com.example.eunyoungha.r_multi_note.activities.LoginActivity;
 import com.example.eunyoungha.r_multi_note.activities.MainActivity;
 import com.example.eunyoungha.r_multi_note.R;
 
@@ -35,7 +36,7 @@ public class FragmentStartThree extends Fragment{
             @Override
             public void onClick(View v) {
                 //Intent for call a Activity from Fragment
-                Intent intent = new Intent(getActivity(), MainActivity.class);
+                Intent intent = new Intent(getActivity(), LoginActivity.class);
                 startActivity(intent);
             }
         });

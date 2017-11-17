@@ -26,6 +26,9 @@ public class MemoList implements Parcelable{
             this.content_text = object.getString("textmemo");
             this.date = object.getString("date");
             this.id_photo = object.getInt("photoid");
+            this.id_video = object.getInt("videoid");
+            this.id_voice = object.getInt("voiceid");
+            this.id_map = object.getInt("mapid");
         }catch (JSONException e){
             e.printStackTrace();
         }

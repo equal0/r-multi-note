@@ -35,8 +35,6 @@ public class StartActivity extends AppCompatActivity {
                     case 0:
                         return new FragmentStartOne();
                     case 1:
-                        return new FragmentStartTwo();
-                    case 2:
                         return new FragmentStartThree();
                     default:
                         return new FragmentStartOne();
@@ -52,6 +50,4 @@ public class StartActivity extends AppCompatActivity {
         Button button = new Button(this);
         button.setText("start");
     }
-
-
 }

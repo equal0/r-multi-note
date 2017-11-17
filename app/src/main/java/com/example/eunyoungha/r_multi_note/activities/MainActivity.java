@@ -94,7 +94,8 @@ public class MainActivity extends AppCompatActivity implements NoteAPICallback {
         mSearchText = (EditText) findViewById(R.id.search_memo_bar);
 
         //test for interacting with app and api
-        //new NoteAPI(getApplicationContext(),this).execute();
+        String [] parameters = {"getMemo","http://10.0.2.2:8080/engine/api/RNote/text"};
+        new NoteAPI(getApplicationContext(),this).execute(parameters);
 
         //memo for database
         setAllMemo();
@@ -141,6 +142,15 @@ public class MainActivity extends AppCompatActivity implements NoteAPICallback {
                 setAllMemo();
         }
         });
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        Intent intent = new Intent(Intent.ACTION_MAIN);
+        intent.addCategory(Intent.CATEGORY_HOME);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
     }
 
     @Override

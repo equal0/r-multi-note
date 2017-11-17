@@ -74,7 +74,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     private GoogleMap mGoogleMap = null;
     private Marker currentMarker = null;
 
-    private RelativeLayout mapLayout;
+    private RelativeLayout mMapLayout;
 
     private static final String TAG = "googlemap_example";
     private static final int GPS_ENABLE_REQUEST_CODE = 2001;
@@ -143,6 +143,10 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     private String voicePath;
 
     private boolean mapFlag = false;
+    private boolean isMapSelected = false;
+    private boolean isPhotoSelected = false;
+    private boolean isVideoSelected = false;
+    private boolean isVoiceSelected = false;
     private double mLatitude;
     private double mLongitude;
     private String mMarkerTitle;
@@ -184,7 +188,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         mMultiMemoView = (RelativeLayout) findViewById(R.id.memo_multi_view);
         mPhoto = (ImageView) findViewById(R.id.memo_multi_view_photo);
         mVideo = (VideoView) findViewById(R.id.memo_multi_view_video);
-        mapLayout = (RelativeLayout) findViewById(R.id.map_layout);
+        mMapLayout = (RelativeLayout) findViewById(R.id.map_layout);
         mVoice = (RelativeLayout) findViewById(R.id.voice_layout);
         mPlayButton = (Button) findViewById(R.id.play_button);
         mMultiButtons = (LinearLayout) findViewById(R.id.layout_multi_bar);
@@ -221,25 +225,22 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                     int videoId = -1;
                     int voiceId = -1;
                     int mapId = -1;
-                    if(mImageUri != null){
+                    if(mImageUri != null && isPhotoSelected){
                         String photoUri = mImageUri.toString();
                         dbHelperPhoto.photoInsert(date, photoUri);
                         photoId = dbHelperPhoto.getPhotoId(photoUri);
-                        //dbHelper.insert(date,content,photoId,videoId,voiceId);
                     }
-                    if(mVideoUri != null){
+                    if(mVideoUri != null && isVideoSelected){
                         String videoUri = mVideoUri.toString();
                         dbHelperVideo.videoInsert(date,videoUri);
                         videoId = dbHelperVideo.getVideoId(videoUri);
-                        //dbHelper.insert(date,content,photoId,videoId,voiceId);
                     }
-                    if(mVoiceUri != null){
+                    if(mVoiceUri != null && isVoiceSelected){
                         String voiceUri = mVoiceUri.toString();
                         dbHelperVoice.voiceInsert(date,voiceUri);
                         voiceId = dbHelperVoice.getVoiceId(voiceUri);
-                        //dbHelper.insert(date,content,photoId,videoId,voiceId);
                     }
-                    if(mLatitude != 0 && mLongitude != 0){
+                    if(mLatitude != 0 && mLongitude != 0 && isMapSelected){
                         String realTime = "time:"+String.valueOf(System.currentTimeMillis());
                         dbHelperMap.mapInsert(date,mMarkerTitle,mLatitude,mLongitude,realTime);
                         mapId = dbHelperMap.geMapId(realTime);
@@ -302,7 +303,6 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                     } else {
                         dbHelper.update(id,context_text);
                     }
-
                     listIntent();
                 }
             });
@@ -340,7 +340,8 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
             @Override
             public void onClick(View v) {
                 changeMargin();
-                mapLayout.setVisibility(View.VISIBLE);
+                mMapLayout.setVisibility(View.VISIBLE);
+                isMapSelected = true;
             }
         });
     }
@@ -915,8 +916,17 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     protected void setPhoto(){
         changeMargin();
         mPhoto.setVisibility(View.VISIBLE);
+        mVideo.setVisibility(View.GONE);
+        mVoice.setVisibility(View.GONE);
+        mMapLayout.setVisibility(View.GONE);
+        mPlayButton.setVisibility(View.GONE);
+        isPhotoSelected = true;
+        isVideoSelected = false;
+        isVoiceSelected = false;
+        isMapSelected = false;
+
         BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inSampleSize = 10;
+        //options.inSampleSize = 4;
         Bitmap bitmap = null;
         try{
             bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(mImageUri),null,options);
@@ -935,6 +945,16 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     protected void setVideo(){
         changeMargin();
         mVideo.setVisibility(View.VISIBLE);
+        mPhoto.setVisibility(View.GONE);
+        mVoice.setVisibility(View.GONE);
+        mMapLayout.setVisibility(View.GONE);
+        mPlayButton.setVisibility(View.GONE);
+
+        isPhotoSelected = false;
+        isVideoSelected = true;
+        isVoiceSelected = false;
+        isMapSelected = false;
+
         //String path = videoFile.getAbsolutePath();
         //mVideo.setVideoPath(path);
         mVideo.setVideoURI(mVideoUri);
@@ -953,6 +973,15 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     protected void setVoice(){
         changeMargin();
         mVoice.setVisibility(View.VISIBLE);
+        mPhoto.setVisibility(View.GONE);
+        mVideo.setVisibility(View.GONE);
+        mMapLayout.setVisibility(View.GONE);
+
+        isPhotoSelected = false;
+        isVideoSelected = false;
+        isVoiceSelected = true;
+        isMapSelected = false;
+
         voicePath = getPath(mVoiceUri);
         mPlayButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -965,23 +994,29 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                 }catch(IOException e){
 
                 }
-
             }
         });
     }
 
     protected void setMap(){
         changeMargin();
-        mapLayout.setVisibility(View.VISIBLE);
+        mMapLayout.setVisibility(View.VISIBLE);
+        mPhoto.setVisibility(View.GONE);
+        mVideo.setVisibility(View.GONE);
+        mVoice.setVisibility(View.GONE);
+        mPlayButton.setVisibility(View.GONE);
+
+        isPhotoSelected = false;
+        isVideoSelected = false;
+        isVoiceSelected = false;
+        isMapSelected = true;
     }
 
     protected void changeMargin(){
-        //사진이 들어가는 레이아웃 보여주기
         mMultiMemoView.setVisibility(View.VISIBLE);
 
-        //텍스트메모가 들어가는 레이아웃의 마진값 수정
         RelativeLayout.LayoutParams mLayoutParams = (RelativeLayout.LayoutParams) mMemoView.getLayoutParams();
-        mLayoutParams.topMargin = 40;
+        mLayoutParams.topMargin = 30;
         mMemoView.setLayoutParams(mLayoutParams);
     }
 
