@@ -135,7 +135,8 @@ public class MainActivity extends AppCompatActivity implements NoteAPICallback {
             @Override
             public void onClick(View v) {
                 listFlag = true;
-                setAllMemo();
+                //setAllMemo();
+                doGetSpecificMemo();
         }
         });
     }
@@ -153,8 +154,67 @@ public class MainActivity extends AppCompatActivity implements NoteAPICallback {
     protected void onStart() {
         super.onStart();
         //test for interacting with app and api
-        String [] parameters = {"getMemo".toString(),"http://localhost:8080/engine/api/RNote/text"};
-        new NoteAPI(getApplicationContext(),this).execute(parameters);
+        doGetAllMemo();
+    }
+
+    private void doGetAllMemo(){
+        String [] parameters = {"getMemo","http://10.0.2.2:8080/engine/api/RNote/text"};
+        new NoteAPI(this).execute(parameters);
+    }
+
+    private void doGetSpecificMemo(){
+        String [] parameters = {"getSpecificMemo","http://10.0.2.2:8080/engine/api/RNote/text"};
+        new NoteAPI(this).execute(parameters);
+    }
+
+    private void setMemos(){
+        memoListAdapter = new MemoListAdapter();
+        for(int i = 0 ; i < mDataSet.size() ; i++){
+            int id = mDataSet.get(i).getId();
+            String date = mDataSet.get(i).getDate();
+            String context_text = mDataSet.get(i).getContent_text();
+            int photoId = mDataSet.get(i).getId_photo();
+            int videoId = mDataSet.get(i).getId_video();
+            int voiceId = mDataSet.get(i).getId_voice();
+            int mapId = mDataSet.get(i).getId_map();
+            memoListAdapter.addItem(new MemoList(id, date,context_text,photoId,videoId,voiceId,mapId));
+        }
+        mShowingResult.setAdapter(memoListAdapter);
+    }
+
+    @Override
+    public void processFinish(APIResponse response) {
+
+        switch (response.getOperation()){
+            case "getAllMemo":
+                List<MemoList> list = response.getMemoList();
+                if(list == null){
+                    Toast.makeText(this,"memo is not exist",Toast.LENGTH_SHORT).show();
+                }else{
+                    if(mDataSet == null || memoListAdapter == null){
+                        mDataSet = list;
+                        setMemos();
+                    }
+                }
+                break;
+            case "getSpecificMemo":
+                List<MemoList> searchList = response.getMemoList();
+                String searchText = mSearchText.getText().toString();
+                if(searchList == null){
+                    Toast.makeText(this,"not exist",Toast.LENGTH_SHORT).show();
+                }else{
+                    if(mDataSet != null){
+                        mDataSet.clear();
+                        for(int i = 0 ; i < searchList.size() ; i++){
+                            String existText = searchList.get(i).getContent_text();
+                            if(existText.contains(searchText)){
+                                mDataSet.add(searchList.get(i));
+                            }
+                        }
+                        setMemos();
+                    }
+                }
+        }
     }
 
     protected void setAllMemo(){
@@ -179,30 +239,6 @@ public class MainActivity extends AppCompatActivity implements NoteAPICallback {
             memoListAdapter.addItem(new MemoList(id, date,context_text,photoId,videoId,voiceId,mapId));
         }
         mShowingResult.setAdapter(memoListAdapter);
-    }
-
-    @Override
-    public void processFinish(APIResponse response) {
-        List<MemoList> list = response.getMemoList();
-        if(list == null){
-            Toast.makeText(this,"memo is not exist",Toast.LENGTH_SHORT).show();
-        }else{
-            if(mDataSet == null || memoListAdapter == null){
-                mDataSet = list;
-                memoListAdapter = new MemoListAdapter();
-                for(int i = 0 ; i < mDataSet.size() ; i++){
-                    int id = mDataSet.get(i).getId();
-                    String date = mDataSet.get(i).getDate();
-                    String context_text = mDataSet.get(i).getContent_text();
-                    int photoId = mDataSet.get(i).getId_photo();
-                    int videoId = mDataSet.get(i).getId_video();
-                    int voiceId = mDataSet.get(i).getId_voice();
-                    int mapId = mDataSet.get(i).getId_map();
-                    memoListAdapter.addItem(new MemoList(id, date,context_text,photoId,videoId,voiceId,mapId));
-                }
-                mShowingResult.setAdapter(memoListAdapter);
-            }
-        }
     }
 
 }

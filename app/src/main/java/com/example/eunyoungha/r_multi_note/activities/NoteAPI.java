@@ -23,19 +23,10 @@ public class NoteAPI extends AsyncTask <Object, Object, APIResponse>{
 
     private static final String TAG = NoteAPI.class.getCanonicalName();
 
-    public enum APIOperation{
-        LOGIN,
-        GET_MEMO_LIST,
-        PHOTO_DETAILS,
-        VIDEO_DETAILS,
-        MAP_DETAILS
-    }
-
-    private final Context mContext;
+    //private final Context mContext;
     private final NoteAPICallback mCallback;
 
-    public NoteAPI(Context mContext, NoteAPICallback mCallback) {
-        this.mContext = mContext;
+    public NoteAPI(NoteAPICallback mCallback) {
         this.mCallback = mCallback;
     }
 
@@ -55,6 +46,8 @@ public class NoteAPI extends AsyncTask <Object, Object, APIResponse>{
                 return doGetVideos(url);
             case "mapDetails":
                 return doGetMaps(url);
+            case "getSpecificMemo":
+                return doGetSpecificMemo(url);
         }
         return null;
     }
@@ -83,7 +76,29 @@ public class NoteAPI extends AsyncTask <Object, Object, APIResponse>{
 
     private APIResponse doGetMemos(String url){
         APIResponse response = new APIResponse();
+        response.setOperation("getAllMemo");
 
+        try {
+            JSONObject result = NetworkRequestUtil.doHttpPost(url);
+            if (result != null) {
+                JSONArray memo = result.getJSONArray("memo");
+                ArrayList<MemoList> memoLists = new ArrayList<>();
+                for(int i = 0 ; i < memo.length() ; i++){
+                    JSONObject list = (JSONObject) memo.get(i);
+                    MemoList memoList = new MemoList(list);
+                    memoLists.add(memoList);
+                }
+                response.setMemoList(memoLists);
+            }
+        } catch (JSONException e){
+
+        }
+        return response;
+    }
+
+    private APIResponse doGetSpecificMemo(String url){
+        APIResponse response = new APIResponse();
+        response.setOperation("getSpecificMemo");
         try {
             JSONObject result = NetworkRequestUtil.doHttpPost(url);
             if (result != null) {

@@ -147,9 +147,6 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
 
     private boolean mapFlag = false;
     private boolean isMapSelected = false;
-    private boolean isPhotoSelected = false;
-    private boolean isVideoSelected = false;
-    private boolean isVoiceSelected = false;
     private double mLatitude;
     private double mLongitude;
     private String mMarkerTitle;
@@ -210,7 +207,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         mBackButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                listIntent();
+                onBackPressed();
             }
         });
 
@@ -271,14 +268,14 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
             if(photoId != -1){
                 //mImageUri = getUri(MEDIA_TYPE_PHOTO, photoId);
                 //setPhoto();
-                String[] parameters  = {"photoDetails","http://localhost:8080/engine/api/RNote/Details"};
-                new NoteAPI(getApplicationContext(),this).execute(parameters);
+                String[] parameters  = {"photoDetails","http://10.0.2.2:8080/engine/api/RNote/Details"};
+                new NoteAPI(this).execute(parameters);
             }
             if(videoId != -1){
                 //mVideoUri = getUri(MEDIA_TYPE_VIDEO, videoId);
                 //setVideo();
-                String[] parameters = {"videoDetails","http://localhost:8080/engine/api/RNote/Details"};
-                new NoteAPI(getApplicationContext(),this).execute(parameters);
+                String[] parameters = {"videoDetails","http://10.0.2.2:8080/engine/api/RNote/Details"};
+                new NoteAPI(this).execute(parameters);
             }
             if(voiceId != -1){
                 mVoiceUri = getUri(MEDIA_TYPE_VOICE,voiceId);
@@ -289,8 +286,8 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
 //                mLongitude = getLatLng(MAP_LONGITUDE,mapId);
 //                setMap();
                 mapFlag = true;
-                String[] parameters = {"mapDetails","http://localhost:8080/engine/api/RNote/Details"};
-                new NoteAPI(getApplicationContext(),this).execute(parameters);
+                String[] parameters = {"mapDetails","http://10.0.2.2:8080/engine/api/RNote/Details"};
+                new NoteAPI(this).execute(parameters);
             }
 
             mEditText.setText(mMemo.getContent_text());
@@ -365,7 +362,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
             Log.d(TAG, "onResume : call startLocationUpdates");
             if (!mRequestingLocationUpdates) startLocationUpdates();
         }
-        //앱 정보에서 퍼미션을 허가했는지를 다시 검사해봐야 한다.
+        //re-check for permission
         if (askPermissionOnceAgain) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 askPermissionOnceAgain = false;
@@ -381,7 +378,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         }else {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                     && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                Log.d(TAG, "startLocationUpdates : 퍼미션 안가지고 있음");
+                Log.d(TAG, "startLocationUpdates : no permission");
                 return;
             }
             Log.d(TAG, "startLocationUpdates : call FusedLocationApi.requestLocationUpdates");
@@ -413,7 +410,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
 
             @Override
             public boolean onMyLocationButtonClick() {
-                Log.d( TAG, "onMyLocationButtonClick : 위치에 따른 카메라 이동 활성화");
+                Log.d( TAG, "onMyLocationButtonClick : activating camera move");
                 mMoveMapByAPI = true;
                 return true;
             }
@@ -431,7 +428,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
             public void onCameraMoveStarted(int i) {
                 if (mMoveMapByUser == true && mRequestingLocationUpdates){
 
-                    Log.d(TAG, "onCameraMove : 위치에 따른 카메라 이동 비활성화");
+                    Log.d(TAG, "onCameraMove : un-activating camera move");
                     mMoveMapByAPI = false;
                 }
                 mMoveMapByUser = true;
@@ -485,6 +482,8 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         super.onStop();
     }
 
+    //-----------------------------------------------------------------------------------------google map methods
+
     @Override
     public void onConnected(Bundle connectionHint) {
         if ( mRequestingLocationUpdates == false ) {
@@ -496,7 +495,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                             new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
                             PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
                 } else {
-                    Log.d(TAG, "onConnected : 퍼미션 가지고 있음");
+                    Log.d(TAG, "onConnected : permission ok");
                     Log.d(TAG, "onConnected : call startLocationUpdates");
                     startLocationUpdates();
                     mGoogleMap.setMyLocationEnabled(true);
@@ -536,15 +535,15 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                     1);
         } catch (IOException ioException) {
             //Network problem
-            Toast.makeText(this, "지오코더 서비스 사용불가", Toast.LENGTH_LONG).show();
-            return "지오코더 서비스 사용불가";
+            Toast.makeText(this, "can't use geo-coder", Toast.LENGTH_LONG).show();
+            return "can't use geo-coder";
         } catch (IllegalArgumentException illegalArgumentException) {
-            Toast.makeText(this, "잘못된 GPS 좌표", Toast.LENGTH_LONG).show();
-            return "잘못된 GPS 좌표";
+            Toast.makeText(this, "wrong GPS coordinate", Toast.LENGTH_LONG).show();
+            return "wrong GPS coordinate";
         }
         if (addresses == null || addresses.size() == 0) {
-            Toast.makeText(this, "주소 미발견", Toast.LENGTH_LONG).show();
-            return "주소 미발견";
+            Toast.makeText(this, "can't find the address", Toast.LENGTH_LONG).show();
+            return "can't find the address";
 
         } else {
             Address address = addresses.get(0);
@@ -612,7 +611,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         mGoogleMap.moveCamera(cameraUpdate);
     }
 
-    //여기부터는 런타임 퍼미션 처리을 위한 메소드들
+    //methods for runtime permission
     @TargetApi(Build.VERSION_CODES.M)
     private void checkPermissions() {
         boolean fineLocationRationale = ActivityCompat
@@ -627,12 +626,12 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
 
         else if (hasFineLocationPermission
                 == PackageManager.PERMISSION_DENIED && !fineLocationRationale) {
-            showDialogForPermissionSetting("퍼미션 거부 + Don't ask again(다시 묻지 않음) " +
-                    "체크 박스를 설정한 경우로 설정에서 퍼미션 허가해야합니다.");
+            showDialogForPermissionSetting("deny permission + Don't ask again" +
+                    "you need to allowing the permission");
         } else if (hasFineLocationPermission == PackageManager.PERMISSION_GRANTED) {
-            Log.d(TAG, "checkPermissions : 퍼미션 가지고 있음");
+            Log.d(TAG, "checkPermissions : permission ok");
             if ( mGoogleApiClient.isConnected() == false) {
-                Log.d(TAG, "checkPermissions : 퍼미션 가지고 있음");
+                Log.d(TAG, "checkPermissions : permissino ok");
                 mGoogleApiClient.connect();
             }
         }
@@ -644,12 +643,9 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                                            @NonNull int[] grantResults) {
         if (permsRequestCode
                 == PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION && grantResults.length > 0) {
-
             boolean permissionAccepted = grantResults[0] == PackageManager.PERMISSION_GRANTED;
-
             if (permissionAccepted) {
                 if ( mGoogleApiClient.isConnected() == false) {
-
                     Log.d(TAG, "onRequestPermissionsResult : mGoogleApiClient connect");
                     mGoogleApiClient.connect();
                 }
@@ -731,6 +727,8 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
         builder.create().show();
     }
 
+    //---------------------------------------------------------------------------------------------- end of google map methods
+
     protected Uri getUri(int type, int id){
         Uri uri = null;
         if(type == MEDIA_TYPE_PHOTO){
@@ -764,7 +762,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         switch (which){
-                            case 0: //take photo 를 눌렀을 때 동작
+                            case 0: //when user clicked take a photo
                                 Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                                 if(intent.resolveActivity(getPackageManager()) != null){
                                     try{
@@ -779,7 +777,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                                     startActivityForResult(intent,REQUEST_TAKE_PHOTO);
                                 }
                                 break;
-                            case 1: //photo library 를 눌렀을 때 동작
+                            case 1: //when user clicked photo library
                                 Intent libraryIntent = new Intent(Intent.ACTION_PICK);
                                 libraryIntent.setType(MediaStore.Images.Media.CONTENT_TYPE);
                                 libraryIntent.setData(MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
@@ -803,7 +801,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         switch (which){
-                            case 0: //take video 를 눌렀을 때 동작
+                            case 0: //take video
                                 Intent intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
                                 if(intent.resolveActivity(getPackageManager()) != null){
                                     try{
@@ -819,7 +817,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                                     startActivityForResult(intent,REQUEST_TAKE_VIDEO);
                                 }
                                 break;
-                            case 1: //video library 를 눌렀을 때 동작
+                            case 1: //video library
                                 Intent libraryIntent = new Intent(Intent.ACTION_PICK);
                                 libraryIntent.setType("video/*");
                                 libraryIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -898,10 +896,9 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                 }else Toast.makeText(getApplicationContext(),"didn't respond",Toast.LENGTH_SHORT).show();
                 break;
             case GPS_ENABLE_REQUEST_CODE:
-                //Check if user ae
                 if (checkLocationServicesStatus()) {
                     if (checkLocationServicesStatus()) {
-                        Log.d(TAG, "onActivityResult : 퍼미션 가지고 있음");
+                        Log.d(TAG, "onActivityResult : has permission");
                         if ( mGoogleApiClient.isConnected() == false ) {
                             Log.d( TAG, "onActivityResult : mGoogleApiClient connect ");
                             mGoogleApiClient.connect();
@@ -928,17 +925,8 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     protected void setPhoto(){
         changeMargin();
         mPhoto.setVisibility(View.VISIBLE);
-//        mVideo.setVisibility(View.GONE);
-//        mVoice.setVisibility(View.GONE);
-//        mMapLayout.setVisibility(View.GONE);
-//        mPlayButton.setVisibility(View.GONE);
-//        isPhotoSelected = true;
-//        isVideoSelected = false;
-//        isVoiceSelected = false;
-//        isMapSelected = false;
 
         BitmapFactory.Options options = new BitmapFactory.Options();
-        //options.inSampleSize = 4;
         Bitmap bitmap = null;
         try{
             bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(mImageUri),null,options);
@@ -957,18 +945,7 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     protected void setVideo(){
         changeMargin();
         mVideo.setVisibility(View.VISIBLE);
-//        mPhoto.setVisibility(View.GONE);
-//        mVoice.setVisibility(View.GONE);
-//        mMapLayout.setVisibility(View.GONE);
-//        mPlayButton.setVisibility(View.GONE);
 
-//        isPhotoSelected = false;
-//        isVideoSelected = true;
-//        isVoiceSelected = false;
-//        isMapSelected = false;
-
-        //String path = videoFile.getAbsolutePath();
-        //mVideo.setVideoPath(path);
         mVideo.setVideoURI(mVideoUri);
         final MediaController mediaController = new MediaController(this);
         mediaController.setAnchorView(mVideo);
@@ -986,14 +963,6 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     protected void setVoice(){
         changeMargin();
         mVoice.setVisibility(View.VISIBLE);
-//        mPhoto.setVisibility(View.GONE);
-//        mVideo.setVisibility(View.GONE);
-//        mMapLayout.setVisibility(View.GONE);
-
-//        isPhotoSelected = false;
-//        isVideoSelected = false;
-//        isVoiceSelected = true;
-//        isMapSelected = false;
 
         voicePath = getPath(mVoiceUri);
         mPlayButton.setOnClickListener(new View.OnClickListener() {
@@ -1014,14 +983,6 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     protected void setMap(){
         changeMargin();
         mMapLayout.setVisibility(View.VISIBLE);
-//        mPhoto.setVisibility(View.GONE);
-//        mVideo.setVisibility(View.GONE);
-//        mVoice.setVisibility(View.GONE);
-//        mPlayButton.setVisibility(View.GONE);
-
-//        isPhotoSelected = false;
-//        isVideoSelected = false;
-//        isVoiceSelected = false;
         isMapSelected = true;
     }
 

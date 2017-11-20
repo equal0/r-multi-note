@@ -26,14 +26,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".activities.MainActivity" />
         <activity android:name=".activities.CreateMemoActivity" />
+        <activity android:name=".activities.LoginActivity"></activity>
+        <activity android:name=".activities.MainActivity" />
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyB1Gs1VNCH-xsjonJVEOsv_amORp7igs4g" />
-
-        <activity android:name=".activities.LoginActivity"></activity>
     </application>
 
 

@@ -48,12 +48,11 @@ public class LoginActivity extends AppCompatActivity implements NoteAPICallback{
                 sendLoginInfo();
             }
         });
-
     }
 
     private void sendLoginInfo(){
-        String []parameter = {"login","http://localhost:8080/engine/api/RNote/login"};
-        new NoteAPI(getApplicationContext(),this).execute(parameter);
+        String []parameter = {"login","http://10.0.2.2:8080/engine/api/RNote/login"};
+        new NoteAPI(this).execute(parameter);
     }
 
     @Override
