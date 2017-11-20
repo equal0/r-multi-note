@@ -31,26 +31,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="30dp"
                 android:layout_marginRight="30dp"
+                android:layout_marginTop="10dp"
                 android:layout_alignParentTop="true"
                 android:visibility="gone"
                 >
-
-                <!--photo-->
-                <ImageView
-                    android:id="@+id/memo_multi_view_photo"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:visibility="gone"
-                    android:adjustViewBounds="true"
-                    />
-
-                <!--video-->
-                <VideoView
-                    android:id="@+id/memo_multi_view_video"
-                    android:layout_width="300dp"
-                    android:layout_height="450dp"
-                    android:visibility="gone"
-                    />
 
                 <!--map-->
                 <RelativeLayout
@@ -62,9 +46,30 @@
                     <fragment
                         android:id="@+id/map"
                         android:layout_width="match_parent"
-                        android:layout_height="300dp"
+                        android:layout_height="250dp"
                         class="com.google.android.gms.maps.MapFragment" />
                 </RelativeLayout>
+
+                <!--video-->
+                <VideoView
+                    android:id="@+id/memo_multi_view_video"
+                    android:layout_width="wrap_content"
+                    android:layout_height="520dp"
+                    android:visibility="gone"
+                    android:layout_marginTop="15dp"
+                    android:layout_below="@+id/map_layout"
+                    />
+
+                <!--photo-->
+                <ImageView
+                    android:id="@+id/memo_multi_view_photo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:adjustViewBounds="true"
+                    android:layout_marginTop="15dp"
+                    android:layout_below="@+id/memo_multi_view_video"
+                    />
 
                 <!--voice-->
                 <RelativeLayout
@@ -72,6 +77,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:visibility="gone"
+                    android:layout_marginTop="15dp"
+                    android:layout_below="@+id/memo_multi_view_photo"
                     >
                     <Button
                         android:id="@+id/play_button"

@@ -23,6 +23,14 @@ public class NoteAPI extends AsyncTask <Object, Object, APIResponse>{
 
     private static final String TAG = NoteAPI.class.getCanonicalName();
 
+    public enum APIOperation{
+        LOGIN,
+        GET_MEMO_LIST,
+        PHOTO_DETAILS,
+        VIDEO_DETAILS,
+        MAP_DETAILS
+    }
+
     private final Context mContext;
     private final NoteAPICallback mCallback;
 
@@ -33,8 +41,6 @@ public class NoteAPI extends AsyncTask <Object, Object, APIResponse>{
 
     @Override
     protected APIResponse doInBackground(Object[] params) {
-        APIResponse response = new APIResponse();
-
         String status = (String) params[0];
         String url = (String) params[1];
 
@@ -43,7 +49,12 @@ public class NoteAPI extends AsyncTask <Object, Object, APIResponse>{
                 return doUserAuthenticate(url);
             case "getMemo":
                 return doGetMemos(url);
-
+            case "photoDetails":
+                return doGetPhotos(url);
+            case "videoDetails":
+                return doGetVideos(url);
+            case "mapDetails":
+                return doGetMaps(url);
         }
         return null;
     }
@@ -86,6 +97,52 @@ public class NoteAPI extends AsyncTask <Object, Object, APIResponse>{
                 response.setMemoList(memoLists);
             }
         } catch (JSONException e){
+
+        }
+        return response;
+    }
+
+    private APIResponse doGetPhotos(String url){
+        APIResponse response = new APIResponse();
+        response.setOperation("getPhoto");
+
+        try{
+            JSONObject result = NetworkRequestUtil.doHttpPost(url);
+            if(result != null){
+                response.setPhotoUri(result.getString("photouri"));
+            }
+        }catch (JSONException e){
+
+        }
+        return response;
+    }
+
+    private APIResponse doGetVideos(String url){
+        APIResponse response = new APIResponse();
+        response.setOperation("getVideo");
+
+        try{
+            JSONObject result = NetworkRequestUtil.doHttpPost(url);
+            if(result != null){
+                response.setVideoUri(result.getString("videouri"));
+            }
+        }catch (JSONException e){
+
+        }
+        return response;
+    }
+
+    private APIResponse doGetMaps(String url){
+        APIResponse response = new APIResponse();
+        response.setOperation("getMap");
+
+        try{
+            JSONObject result = NetworkRequestUtil.doHttpPost(url);
+            if(result != null){
+                response.setLatitude(result.getDouble("latitude"));
+                response.setLongitude(result.getDouble("longitude"));
+            }
+        }catch (JSONException e){
 
         }
         return response;

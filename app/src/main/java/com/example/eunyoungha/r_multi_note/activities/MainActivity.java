@@ -93,14 +93,10 @@ public class MainActivity extends AppCompatActivity implements NoteAPICallback {
         mSearchButton = (Button) findViewById(R.id.search_memo_button);
         mSearchText = (EditText) findViewById(R.id.search_memo_bar);
 
-        //test for interacting with app and api
-        String [] parameters = {"getMemo","http://10.0.2.2:8080/engine/api/RNote/text"};
-        new NoteAPI(getApplicationContext(),this).execute(parameters);
-
         //memo for database
-        setAllMemo();
+        //setAllMemo();
 
-        //When user clicked list item
+        //When user clicked list item in database
         mShowingResult.setOnItemClickListener(new AdapterView.OnItemClickListener(){
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -156,6 +152,9 @@ public class MainActivity extends AppCompatActivity implements NoteAPICallback {
     @Override
     protected void onStart() {
         super.onStart();
+        //test for interacting with app and api
+        String [] parameters = {"getMemo".toString(),"http://localhost:8080/engine/api/RNote/text"};
+        new NoteAPI(getApplicationContext(),this).execute(parameters);
     }
 
     protected void setAllMemo(){

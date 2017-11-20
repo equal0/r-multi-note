@@ -39,6 +39,8 @@ import android.widget.RelativeLayout;
 import android.widget.Toast;
 import android.widget.VideoView;
 
+import com.example.eunyoungha.r_multi_note.APIResponse;
+import com.example.eunyoungha.r_multi_note.interfaces.NoteAPICallback;
 import com.example.eunyoungha.r_multi_note.utils.DatabaseHelper;
 import com.example.eunyoungha.r_multi_note.models.MemoList;
 import com.example.eunyoungha.r_multi_note.R;
@@ -68,7 +70,8 @@ import java.util.Locale;
 public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
-        LocationListener{
+        LocationListener,
+        NoteAPICallback{
 
     private GoogleApiClient mGoogleApiClient = null;
     private GoogleMap mGoogleMap = null;
@@ -225,17 +228,17 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
                     int videoId = -1;
                     int voiceId = -1;
                     int mapId = -1;
-                    if(mImageUri != null && isPhotoSelected){
+                    if(mImageUri != null){
                         String photoUri = mImageUri.toString();
                         dbHelperPhoto.photoInsert(date, photoUri);
                         photoId = dbHelperPhoto.getPhotoId(photoUri);
                     }
-                    if(mVideoUri != null && isVideoSelected){
+                    if(mVideoUri != null){
                         String videoUri = mVideoUri.toString();
                         dbHelperVideo.videoInsert(date,videoUri);
                         videoId = dbHelperVideo.getVideoId(videoUri);
                     }
-                    if(mVoiceUri != null && isVoiceSelected){
+                    if(mVoiceUri != null){
                         String voiceUri = mVoiceUri.toString();
                         dbHelperVoice.voiceInsert(date,voiceUri);
                         voiceId = dbHelperVoice.getVoiceId(voiceUri);
@@ -266,19 +269,28 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
             int voiceId = mMemo.getId_voice();
             int mapId = mMemo.getId_map();
             if(photoId != -1){
-                mImageUri = getUri(MEDIA_TYPE_PHOTO, photoId);
-                setPhoto();
-            }else if(videoId != -1){
-                mVideoUri = getUri(MEDIA_TYPE_VIDEO, videoId);
-                setVideo();
-            }else if(voiceId != -1){
+                //mImageUri = getUri(MEDIA_TYPE_PHOTO, photoId);
+                //setPhoto();
+                String[] parameters  = {"photoDetails","http://localhost:8080/engine/api/RNote/Details"};
+                new NoteAPI(getApplicationContext(),this).execute(parameters);
+            }
+            if(videoId != -1){
+                //mVideoUri = getUri(MEDIA_TYPE_VIDEO, videoId);
+                //setVideo();
+                String[] parameters = {"videoDetails","http://localhost:8080/engine/api/RNote/Details"};
+                new NoteAPI(getApplicationContext(),this).execute(parameters);
+            }
+            if(voiceId != -1){
                 mVoiceUri = getUri(MEDIA_TYPE_VOICE,voiceId);
                 setVoice();
             }
             if(mapId != -1){
-                mLatitude = getLatLng(MAP_LATITUDE,mapId);
-                mLongitude = getLatLng(MAP_LONGITUDE,mapId);
-                setMap();
+//                mLatitude = getLatLng(MAP_LATITUDE,mapId);
+//                mLongitude = getLatLng(MAP_LONGITUDE,mapId);
+//                setMap();
+                mapFlag = true;
+                String[] parameters = {"mapDetails","http://localhost:8080/engine/api/RNote/Details"};
+                new NoteAPI(getApplicationContext(),this).execute(parameters);
             }
 
             mEditText.setText(mMemo.getContent_text());
@@ -583,8 +595,8 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
 
         //default location, crimson house
         LatLng DEFAULT_LOCATION = new LatLng(35.610508, 139.630020);
-        String markerTitle = "위치정보 가져올 수 없음";
-        String markerSnippet = "위치 퍼미션과 GPS 활성 요부 확인하세요";
+        String markerTitle = "Error";
+        String markerSnippet = "Please check location and GPS permission";
 
         if (currentMarker != null) currentMarker.remove();
 
@@ -916,14 +928,14 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     protected void setPhoto(){
         changeMargin();
         mPhoto.setVisibility(View.VISIBLE);
-        mVideo.setVisibility(View.GONE);
-        mVoice.setVisibility(View.GONE);
-        mMapLayout.setVisibility(View.GONE);
-        mPlayButton.setVisibility(View.GONE);
-        isPhotoSelected = true;
-        isVideoSelected = false;
-        isVoiceSelected = false;
-        isMapSelected = false;
+//        mVideo.setVisibility(View.GONE);
+//        mVoice.setVisibility(View.GONE);
+//        mMapLayout.setVisibility(View.GONE);
+//        mPlayButton.setVisibility(View.GONE);
+//        isPhotoSelected = true;
+//        isVideoSelected = false;
+//        isVoiceSelected = false;
+//        isMapSelected = false;
 
         BitmapFactory.Options options = new BitmapFactory.Options();
         //options.inSampleSize = 4;
@@ -945,20 +957,21 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     protected void setVideo(){
         changeMargin();
         mVideo.setVisibility(View.VISIBLE);
-        mPhoto.setVisibility(View.GONE);
-        mVoice.setVisibility(View.GONE);
-        mMapLayout.setVisibility(View.GONE);
-        mPlayButton.setVisibility(View.GONE);
+//        mPhoto.setVisibility(View.GONE);
+//        mVoice.setVisibility(View.GONE);
+//        mMapLayout.setVisibility(View.GONE);
+//        mPlayButton.setVisibility(View.GONE);
 
-        isPhotoSelected = false;
-        isVideoSelected = true;
-        isVoiceSelected = false;
-        isMapSelected = false;
+//        isPhotoSelected = false;
+//        isVideoSelected = true;
+//        isVoiceSelected = false;
+//        isMapSelected = false;
 
         //String path = videoFile.getAbsolutePath();
         //mVideo.setVideoPath(path);
         mVideo.setVideoURI(mVideoUri);
         final MediaController mediaController = new MediaController(this);
+        mediaController.setAnchorView(mVideo);
         mVideo.setMediaController(mediaController);
         mVideo.start();
         mVideo.postDelayed(new Runnable() {
@@ -973,14 +986,14 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     protected void setVoice(){
         changeMargin();
         mVoice.setVisibility(View.VISIBLE);
-        mPhoto.setVisibility(View.GONE);
-        mVideo.setVisibility(View.GONE);
-        mMapLayout.setVisibility(View.GONE);
+//        mPhoto.setVisibility(View.GONE);
+//        mVideo.setVisibility(View.GONE);
+//        mMapLayout.setVisibility(View.GONE);
 
-        isPhotoSelected = false;
-        isVideoSelected = false;
-        isVoiceSelected = true;
-        isMapSelected = false;
+//        isPhotoSelected = false;
+//        isVideoSelected = false;
+//        isVoiceSelected = true;
+//        isMapSelected = false;
 
         voicePath = getPath(mVoiceUri);
         mPlayButton.setOnClickListener(new View.OnClickListener() {
@@ -1001,14 +1014,14 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
     protected void setMap(){
         changeMargin();
         mMapLayout.setVisibility(View.VISIBLE);
-        mPhoto.setVisibility(View.GONE);
-        mVideo.setVisibility(View.GONE);
-        mVoice.setVisibility(View.GONE);
-        mPlayButton.setVisibility(View.GONE);
+//        mPhoto.setVisibility(View.GONE);
+//        mVideo.setVisibility(View.GONE);
+//        mVoice.setVisibility(View.GONE);
+//        mPlayButton.setVisibility(View.GONE);
 
-        isPhotoSelected = false;
-        isVideoSelected = false;
-        isVoiceSelected = false;
+//        isPhotoSelected = false;
+//        isVideoSelected = false;
+//        isVoiceSelected = false;
         isMapSelected = true;
     }
 
@@ -1045,5 +1058,24 @@ public class CreateMemoActivity extends AppCompatActivity implements OnMapReadyC
             } catch(OutOfMemoryError e){}
         }
         return bitmap;
+    }
+
+    @Override
+    public void processFinish(APIResponse response) {
+        switch (response.getOperation()){
+            case "getPhoto":
+                mImageUri = Uri.parse(response.getPhotoUri());
+                setPhoto();
+                return;
+            case "getVideo":
+                mVideoUri = Uri.parse(response.getVideoUri());
+                setVideo();
+                return;
+            case "getMap":
+                mLatitude = response.getLatitude();
+                mLongitude = response.getLongitude();
+                setMap();
+        }
+
     }
 }

@@ -31,20 +31,23 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:layout_centerHorizontal="true"
-        android:layout_alignParentBottom="true"
+        android:layout_below="@id/start_one_image"
+        android:paddingTop="100dp"
         >
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="20dp"
-            android:text="new text"
+            android:textColor="#BF0000"
+            android:textSize="50dp"
+            android:text="Welcome !"
             />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="20dp"
-            android:text="new text"
+            android:layout_marginTop="20dp"
+            android:text="slide this page and start multi memo"
             />
     </LinearLayout>
 

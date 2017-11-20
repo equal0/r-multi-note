@@ -11,11 +11,10 @@ import android.widget.Button;
 import com.example.eunyoungha.r_multi_note.R;
 import com.example.eunyoungha.r_multi_note.fragments.FragmentStartOne;
 import com.example.eunyoungha.r_multi_note.fragments.FragmentStartThree;
-import com.example.eunyoungha.r_multi_note.fragments.FragmentStartTwo;
 
 public class StartActivity extends AppCompatActivity {
 
-    private static int mTabNumber = 3;
+    private static int mTabNumber = 2;
 
     ViewPager viewPager;
 
@@ -30,15 +29,13 @@ public class StartActivity extends AppCompatActivity {
         viewPager.setAdapter(new FragmentStatePagerAdapter(getSupportFragmentManager()) {
             @Override
             public Fragment getItem(int position) {
-
                 switch(position){
                     case 0:
                         return new FragmentStartOne();
                     case 1:
                         return new FragmentStartThree();
-                    default:
-                        return new FragmentStartOne();
                 }
+                return new FragmentStartOne();
             }
 
             @Override
@@ -46,8 +43,8 @@ public class StartActivity extends AppCompatActivity {
                 return mTabNumber;
             }
         });
-
-        Button button = new Button(this);
-        button.setText("start");
+//
+//        Button button = new Button(this);
+//        button.setText("start");
     }
 }
